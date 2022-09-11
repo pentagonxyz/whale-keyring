@@ -16,12 +16,14 @@ const {
   createHttpLink,
   InMemoryCache,
   split,
-} = require('@apollo/client');
+} = require('@apollo/client/core');
 const { GraphQLWsLink } = require('@apollo/client/link/subscriptions');
 const { getMainDefinition } = require('@apollo/client/utilities');
 const { createClient } = require('graphql-ws');
 const { setContext } = require('@apollo/client/link/context');
 const uuidv4 = require('uuid').v4;
+const fetch = require('cross-fetch');
+const WebSocket = require('ws');
 
 const type = 'Whale Financial MPC';
 const baseAPIUrl = 'http://localhost:8080';
@@ -29,6 +31,7 @@ const baseAPIUrl = 'http://localhost:8080';
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
   credentials: 'include',
+  fetch
 });
 
 const [apiProtocol, apiPathname] = baseAPIUrl.split('://');
@@ -81,6 +84,7 @@ class WhaleKeyring extends EventEmitter {
     const wsLink = new GraphQLWsLink(
       createClient({
         url: `${wsProtocol}://${apiPathname}/graphql`,
+        webSocketImpl: WebSocket
       }),
     );
 
