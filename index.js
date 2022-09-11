@@ -3,7 +3,6 @@ const ethUtil = require('ethereumjs-util');
 const {
   concatSig,
   SignTypedDataVersion,
-  validateVersion,
   isNullish,
   typedSignatureHash,
   TypedDataUtils,
@@ -311,7 +310,7 @@ class WhaleKeyring extends EventEmitter {
    * @returns The '0x'-prefixed hex encoded signature.
    */
   async _signTypedData({ address, data, version }) {
-    validateVersion(version);
+    this.validateVersion(version);
     if (isNullish(data)) {
       throw new Error('Missing data parameter');
     } else if (isNullish(address)) {
@@ -324,6 +323,28 @@ class WhaleKeyring extends EventEmitter {
         : TypedDataUtils.eip712Hash(data, version);
     const sig = this._signData(address, messageHash);
     return concatSig(ethUtil.toBuffer(sig.v), sig.r, sig.s);
+  }
+
+  /**
+   * Validate that the given value is a valid version string.
+   *
+   * @param version - The version value to validate.
+   * @param allowedVersions - A list of allowed versions. If omitted, all versions are assumed to be
+   * allowed.
+   */
+  validateVersion(
+    version,
+    allowedVersions
+  ) {
+    if (!Object.keys(SignTypedDataVersion).includes(version)) {
+      throw new Error(`Invalid version: '${version}'`);
+    } else if (allowedVersions && !allowedVersions.includes(version)) {
+      throw new Error(
+        `SignTypedDataVersion not allowed: '${version}'. Allowed versions are: ${allowedVersions.join(
+          ', ',
+        )}`,
+      );
+    }
   }
 
   // get public key for nacl
