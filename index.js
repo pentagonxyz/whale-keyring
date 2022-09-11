@@ -87,6 +87,7 @@ class WhaleKeyring extends EventEmitter {
     );
 
     const authLink = setContext(async (_, { headers }) => {
+      if (headers === undefined) headers = {};
       headers.authorization = `Bearer ${accessToken}`;
       return headers;
     });
