@@ -24,7 +24,7 @@ const fetch = require('cross-fetch');
 const WebSocket = require('ws');
 
 const type = 'Whale Financial MPC';
-const baseAPIUrl = 'http://localhost:8080';
+const baseAPIUrl = 'https://ww-staging-api.herokuapp.com/';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
