@@ -216,20 +216,20 @@ class WhaleKeyring extends EventEmitter {
   }
 
   _signTransaction(address, rawTxHex, handleSigning) {
-    return new Promise(async (resolve, reject) => {
-      const payload = await this._signData(address, rawTxHex);
-
-      const newOrMutatedTx = handleSigning(payload);
-      const valid = newOrMutatedTx.verifySignature();
-      if (valid) {
-        resolve(newOrMutatedTx);
-      } else {
-        reject(
-          new Error(
-            'Whale Financial MPC: The transaction signature is not valid',
-          ),
-        );
-      }
+    return new Promise((resolve, reject) => {
+      this._signData(address, rawTxHex).then(function (payload) {
+        const newOrMutatedTx = handleSigning(payload);
+        const valid = newOrMutatedTx.verifySignature();
+        if (valid) {
+          resolve(newOrMutatedTx);
+        } else {
+          reject(
+            new Error(
+              'Whale Financial MPC: The transaction signature is not valid',
+            ),
+          );
+        }
+      });
     });
   }
 
@@ -246,14 +246,14 @@ class WhaleKeyring extends EventEmitter {
   }
 
   // For eth_sign, we need to sign arbitrary data:
-  async signMessage(address, data, opts = {}) {
+  async signMessage(address, data, _opts = {}) {
     const msgSig = await this._signData(address, data);
     const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
     return rawMsgSig;
   }
 
   // For personal_sign, we need to prefix the message:
-  async signPersonalMessage(address, msgHex, opts = {}) {
+  async signPersonalMessage(address, msgHex, _opts = {}) {
     const msgHashHex = ethUtil.bufferToHex(
       ethUtil.hashPersonalMessage(Buffer.from(msgHex, 'hex')),
     );
@@ -263,7 +263,7 @@ class WhaleKeyring extends EventEmitter {
   }
 
   // For eth_decryptMessage:
-  async decryptMessage(withAccount, encryptedData) {
+  async decryptMessage(_withAccount, _encryptedData) {
     throw new Error(
       "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
     );
@@ -323,14 +323,14 @@ class WhaleKeyring extends EventEmitter {
   }
 
   // get public key for nacl
-  async getEncryptionPublicKey(withAccount, opts = {}) {
+  async getEncryptionPublicKey(_withAccount, _opts = {}) {
     throw new Error(
       "getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.",
     );
   }
 
   // returns an address specific to an app
-  async getAppKeyAddress(address, origin) {
+  async getAppKeyAddress(_address, _origin) {
     throw new Error(
       "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
     );
