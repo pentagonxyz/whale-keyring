@@ -1,11 +1,7 @@
 const ethUtil = require('ethereumjs-util');
 const {
-  encrypt,
-  getEncryptionPublicKey,
-  personalSign,
   recoverPersonalSignature,
   recoverTypedSignature,
-  signTypedData,
   SignTypedDataVersion,
 } = require('@metamask/eth-sig-util');
 const {
@@ -14,7 +10,7 @@ const {
 } = require('@ethereumjs/tx');
 const SimpleKeyring = require('..');
 
-const TYPE_STR = 'Simple Key Pair';
+const TYPE_STR = 'Whale Financial MPC';
 
 // Sample account:
 const testAccount = {
@@ -473,33 +469,11 @@ describe('simple-keyring', function () {
       'hex',
     );
     const privKeyHex = ethUtil.bufferToHex(privateKey);
-    const message = 'Hello world!';
-    const encryptedMessage = encrypt({
-      publicKey: getEncryptionPublicKey(privateKey),
-      data: message,
-      version: 'x25519-xsalsa20-poly1305',
-    });
 
-    it('returns the expected value', async function () {
-      await keyring.deserialize([privKeyHex]);
-      const decryptedMessage = await keyring.decryptMessage(
-        address,
-        encryptedMessage,
-      );
-      expect(message).toBe(decryptedMessage);
-    });
-
-    it('throw error if address passed is not present in the keyring', async function () {
-      await keyring.deserialize([privKeyHex]);
-      await expect(
-        keyring.decryptMessage(notKeyringAddress, encryptedMessage),
-      ).rejects.toThrow('Simple Keyring - Unable to find matching address.');
-    });
-
-    it('throw error if wrong encrypted data object is passed', async function () {
+    it('is not implemented', async function () {
       await keyring.deserialize([privKeyHex]);
       await expect(keyring.decryptMessage(address, {})).rejects.toThrow(
-        'Encryption type/version not supported.',
+        "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
       );
     });
   });
@@ -614,142 +588,24 @@ describe('simple-keyring', function () {
   });
 
   describe('getAppKeyAddress', function () {
-    it('should return a public address custom to the provided app key origin', async function () {
+    it('should be unimplemented', async function () {
       const { address } = testAccount;
       const simpleKeyring = new SimpleKeyring([testAccount.key]);
-
-      const appKeyAddress = await simpleKeyring.getAppKeyAddress(
-        address,
-        'someapp.origin.io',
-      );
-
-      expect(address).not.toBe(appKeyAddress);
-      expect(ethUtil.isValidAddress(appKeyAddress)).toBe(true);
-    });
-
-    it('should return different addresses when provided different app key origins', async function () {
-      const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-
-      const appKeyAddress1 = await simpleKeyring.getAppKeyAddress(
-        address,
-        'someapp.origin.io',
-      );
-
-      expect(ethUtil.isValidAddress(appKeyAddress1)).toBe(true);
-
-      const appKeyAddress2 = await simpleKeyring.getAppKeyAddress(
-        address,
-        'anotherapp.origin.io',
-      );
-
-      expect(ethUtil.isValidAddress(appKeyAddress2)).toBe(true);
-      expect(appKeyAddress1).not.toBe(appKeyAddress2);
-    });
-
-    it('should return the same address when called multiple times with the same params', async function () {
-      const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-
-      const appKeyAddress1 = await simpleKeyring.getAppKeyAddress(
-        address,
-        'someapp.origin.io',
-      );
-
-      expect(ethUtil.isValidAddress(appKeyAddress1)).toBe(true);
-
-      const appKeyAddress2 = await simpleKeyring.getAppKeyAddress(
-        address,
-        'someapp.origin.io',
-      );
-
-      expect(ethUtil.isValidAddress(appKeyAddress2)).toBe(true);
-      expect(appKeyAddress1).toBe(appKeyAddress2);
-    });
-
-    it('should throw error if the provided origin is not a string', async function () {
-      const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-
-      await expect(simpleKeyring.getAppKeyAddress(address, [])).rejects.toThrow(
-        `'origin' must be a non-empty string`,
-      );
-    });
-
-    it('should throw error if the provided origin is an empty string', async function () {
-      const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-
-      await expect(simpleKeyring.getAppKeyAddress(address, '')).rejects.toThrow(
-        `'origin' must be a non-empty string`,
+      await expect(
+        simpleKeyring.getAppKeyAddress(address, 'someapp.origin.io'),
+      ).rejects.toThrow(
+        "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
       );
     });
   });
 
   describe('exportAccount', function () {
-    it('should return a hex-encoded private key', async function () {
+    it('should be unimplemented', async function () {
       const { address } = testAccount;
       const simpleKeyring = new SimpleKeyring([testAccount.key]);
-      const privKeyHexValue = await simpleKeyring.exportAccount(address);
-      expect(testAccount.key).toBe(`0x${privKeyHexValue}`);
-    });
-
-    it('throw error if account is not present', async function () {
-      await expect(keyring.exportAccount(notKeyringAddress)).rejects.toThrow(
-        'Simple Keyring - Unable to find matching address.',
+      await expect(simpleKeyring.exportAccount(address)).rejects.toThrow(
+        "exportAccount is not implemented in Whale Financial's WhaleKeyring.",
       );
-    });
-  });
-
-  describe('signing methods withAppKeyOrigin option', function () {
-    it('should signPersonalMessage with the expected key when passed a withAppKeyOrigin', async function () {
-      const { address } = testAccount;
-      const message = '0x68656c6c6f20776f726c64';
-
-      const privateKeyHex =
-        '4fbe006f0e9c2374f53eb1aef1b6970d20206c61ea05ad9591ef42176eb842c0';
-      const privateKey = Buffer.from(privateKeyHex, 'hex');
-      const expectedSignature = personalSign({ privateKey, data: message });
-
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-      const signature = await simpleKeyring.signPersonalMessage(
-        address,
-        message,
-        {
-          withAppKeyOrigin: 'someapp.origin.io',
-        },
-      );
-
-      expect(expectedSignature).toBe(signature);
-    });
-
-    it('should signTypedData V3 with the expected key when passed a withAppKeyOrigin', async function () {
-      const { address } = testAccount;
-      const typedData = {
-        types: {
-          EIP712Domain: [],
-        },
-        domain: {},
-        primaryType: 'EIP712Domain',
-        message: {},
-      };
-
-      const privateKeyHex =
-        '4fbe006f0e9c2374f53eb1aef1b6970d20206c61ea05ad9591ef42176eb842c0';
-      const privateKey = Buffer.from(privateKeyHex, 'hex');
-      const expectedSignature = signTypedData({
-        privateKey,
-        data: typedData,
-        version: SignTypedDataVersion.V3,
-      });
-
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-      const signature = await simpleKeyring.signTypedData(address, typedData, {
-        withAppKeyOrigin: 'someapp.origin.io',
-        version: 'V3',
-      });
-
-      expect(expectedSignature).toBe(signature);
     });
   });
 });
