@@ -6,9 +6,9 @@ const {
   validateVersion,
   isNullish,
   typedSignatureHash,
-  TypedDataUtils
-} = require("@metamask/eth-sig-util");
-const { TransactionFactory } = require('@ethereumjs/tx')
+  TypedDataUtils,
+} = require('@metamask/eth-sig-util');
+const { TransactionFactory } = require('@ethereumjs/tx');
 
 const {
   gql,
@@ -16,22 +16,22 @@ const {
   createHttpLink,
   InMemoryCache,
   split,
-} = require("@apollo/client");
-const { GraphQLWsLink } = require("@apollo/client/link/subscriptions");
-const { getMainDefinition } = require("@apollo/client/utilities");
-const { createClient } = require("graphql-ws");
-const { setContext } = require("@apollo/client/link/context");
-const uuidv4 = require("uuid").v4;
+} = require('@apollo/client');
+const { GraphQLWsLink } = require('@apollo/client/link/subscriptions');
+const { getMainDefinition } = require('@apollo/client/utilities');
+const { createClient } = require('graphql-ws');
+const { setContext } = require('@apollo/client/link/context');
+const uuidv4 = require('uuid').v4;
 
 const type = 'Whale Financial MPC';
-const baseAPIUrl = "http://localhost:8080";
+const baseAPIUrl = 'http://localhost:8080';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
-  credentials: "include",
+  credentials: 'include',
 });
 
-const [apiProtocol, apiPathname] = baseAPIUrl.split("://");
+const [apiProtocol, apiPathname] = baseAPIUrl.split('://');
 
 const CREATE_WALLET = gql`
   mutation CreateWallet($data: CreateOneWalletInput!) {
@@ -75,13 +75,13 @@ class WhaleKeyring extends EventEmitter {
     this.type = type;
     this.deserialize(accessToken);
 
-    const wsProtocol = apiProtocol === "https" ? "wss" : "ws";
+    const wsProtocol = apiProtocol === 'https' ? 'wss' : 'ws';
 
     // @todo add authentication over WebSocket
     const wsLink = new GraphQLWsLink(
       createClient({
         url: `${wsProtocol}://${apiPathname}/graphql`,
-      })
+      }),
     );
 
     const authLink = setContext(async (_, { headers }) => {
@@ -97,10 +97,13 @@ class WhaleKeyring extends EventEmitter {
     const splitLink = split(
       ({ query }) => {
         const definition = getMainDefinition(query);
-        return definition.kind === "OperationDefinition" && definition.operation === "subscription";
+        return (
+          definition.kind === 'OperationDefinition' &&
+          definition.operation === 'subscription'
+        );
       },
       wsLink,
-      httpLink
+      httpLink,
     );
 
     this.apolloClient = new ApolloClient({
@@ -128,13 +131,15 @@ class WhaleKeyring extends EventEmitter {
         variables: {
           data: {
             sessionId: uuidv4(),
-            name: "Account #" + (prevAccountCount + 1 + i) + " (" + (new Date()).toLocaleString('en-GB', { timeZone: 'UTC' }) + " UTC)",
+            name: `Account #${
+              prevAccountCount + 1 + i
+            } (${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC)`,
             parties: 3,
             threshold: 2,
             blockchain: 'ETHEREUM',
-            currency: "USD",
+            currency: 'USD',
           },
-        }
+        },
       });
 
       newWallets.push(newAccount.address);
@@ -144,14 +149,14 @@ class WhaleKeyring extends EventEmitter {
 
   async getAccounts() {
     const wallets = await this.apolloClient.query({
-      query: LIST_WALLETS
+      query: LIST_WALLETS,
     });
     return wallets.map(({ address }) => address);
   }
 
   // tx is an instance of the ethereumjs-transaction class.
-  signTransaction (address, tx) {
-    let rawTxHex
+  signTransaction(address, tx) {
+    let rawTxHex;
     // transactions built with older versions of ethereumjs-tx have a
     // getChainId method that newer versions do not. Older versions are mutable
     // while newer versions default to being immutable. Expected shape and type
@@ -162,18 +167,18 @@ class WhaleKeyring extends EventEmitter {
       // transaction which is only communicated to ethereumjs-tx in this
       // value. In newer versions the chainId is communicated via the 'Common'
       // object.
-      tx.v = ethUtil.bufferToHex(tx.getChainId())
-      tx.r = '0x00'
-      tx.s = '0x00'
+      tx.v = ethUtil.bufferToHex(tx.getChainId());
+      tx.r = '0x00';
+      tx.s = '0x00';
 
-      rawTxHex = tx.serialize().toString('hex')
+      rawTxHex = tx.serialize().toString('hex');
 
       return this._signTransaction(address, rawTxHex, (payload) => {
-        tx.v = Buffer.from(payload.v, 'hex')
-        tx.r = Buffer.from(payload.r, 'hex')
-        tx.s = Buffer.from(payload.s, 'hex')
-        return tx
-      })
+        tx.v = Buffer.from(payload.v, 'hex');
+        tx.r = Buffer.from(payload.r, 'hex');
+        tx.s = Buffer.from(payload.s, 'hex');
+        return tx;
+      });
     }
 
     // The below `encode` call is only necessary for legacy transactions, as `getMessageToSign`
@@ -184,41 +189,48 @@ class WhaleKeyring extends EventEmitter {
     // Note also that `getMessageToSign` will return valid RLP for all transaction types, whereas the
     // `serialize` method will not for any transaction type except legacy. This is because `serialize` includes
     // empty r, s and v values in the encoded rlp. This is why we use `getMessageToSign` here instead of `serialize`.
-    const messageToSign = tx.getMessageToSign(false)
+    const messageToSign = tx.getMessageToSign(false);
 
     rawTxHex = Buffer.isBuffer(messageToSign)
       ? messageToSign.toString('hex')
-      : ethUtil.rlp.encode(messageToSign).toString('hex')
+      : ethUtil.rlp.encode(messageToSign).toString('hex');
 
     return this._signTransaction(address, rawTxHex, (payload) => {
       // Because tx will be immutable, first get a plain javascript object that
       // represents the transaction. Using txData here as it aligns with the
       // nomenclature of ethereumjs/tx.
-      const txData = tx.toJSON()
+      const txData = tx.toJSON();
       // The fromTxData utility expects a type to support transactions with a type other than 0
-      txData.type = tx.type
+      txData.type = tx.type;
       // The fromTxData utility expects v,r and s to be hex prefixed
-      txData.v = ethUtil.addHexPrefix(payload.v)
-      txData.r = ethUtil.addHexPrefix(payload.r)
-      txData.s = ethUtil.addHexPrefix(payload.s)
+      txData.v = ethUtil.addHexPrefix(payload.v);
+      txData.r = ethUtil.addHexPrefix(payload.r);
+      txData.s = ethUtil.addHexPrefix(payload.s);
       // Adopt the 'common' option from the original transaction and set the
       // returned object to be frozen if the original is frozen.
-      return TransactionFactory.fromTxData(txData, { common: tx.common, freeze: Object.isFrozen(tx) })
-    })
+      return TransactionFactory.fromTxData(txData, {
+        common: tx.common,
+        freeze: Object.isFrozen(tx),
+      });
+    });
   }
 
-  _signTransaction (address, rawTxHex, handleSigning) {
+  _signTransaction(address, rawTxHex, handleSigning) {
     return new Promise(async (resolve, reject) => {
       const payload = await this._signData(address, rawTxHex);
 
-      const newOrMutatedTx = handleSigning(payload)
-      const valid = newOrMutatedTx.verifySignature()
+      const newOrMutatedTx = handleSigning(payload);
+      const valid = newOrMutatedTx.verifySignature();
       if (valid) {
-        resolve(newOrMutatedTx)
+        resolve(newOrMutatedTx);
       } else {
-        reject(new Error('Whale Financial MPC: The transaction signature is not valid'))
+        reject(
+          new Error(
+            'Whale Financial MPC: The transaction signature is not valid',
+          ),
+        );
       }
-    })
+    });
   }
 
   _signData(address, message) {
@@ -227,9 +239,9 @@ class WhaleKeyring extends EventEmitter {
       variables: {
         data: {
           address,
-          message
+          message,
         },
-      }
+      },
     });
   }
 
@@ -242,7 +254,9 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, opts = {}) {
-    let msgHashHex = ethUtil.bufferToHex(ethUtil.hashPersonalMessage(Buffer.from(msgHex, 'hex')));
+    const msgHashHex = ethUtil.bufferToHex(
+      ethUtil.hashPersonalMessage(Buffer.from(msgHex, 'hex')),
+    );
     const msgSig = await this._signData(address, msgHashHex);
     const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
     return rawMsgSig;
@@ -250,7 +264,9 @@ class WhaleKeyring extends EventEmitter {
 
   // For eth_decryptMessage:
   async decryptMessage(withAccount, encryptedData) {
-    throw new Error("decryptMessage is not implemented in Whale Financial's WhaleKeyring.");
+    throw new Error(
+      "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
+    );
   }
 
   // personal_signTypedData, signs data along with the schema
@@ -264,7 +280,11 @@ class WhaleKeyring extends EventEmitter {
       ? opts.version
       : SignTypedDataVersion.V1;
 
-    return this._signTypedData({ address: withAccount, data: typedData, version });
+    return this._signTypedData({
+      address: withAccount,
+      data: typedData,
+      version,
+    });
   }
 
   /**
@@ -297,22 +317,23 @@ class WhaleKeyring extends EventEmitter {
     const messageHash =
       version === SignTypedDataVersion.V1
         ? Buffer.from(typedSignatureHash(data), 'hex')
-        : TypedDataUtils.eip712Hash(
-            data,
-            version,
-          );
+        : TypedDataUtils.eip712Hash(data, version);
     const sig = this._signData(address, messageHash);
     return concatSig(ethUtil.toBuffer(sig.v), sig.r, sig.s);
   }
 
   // get public key for nacl
   async getEncryptionPublicKey(withAccount, opts = {}) {
-    throw new Error("getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.");
+    throw new Error(
+      "getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.",
+    );
   }
 
   // returns an address specific to an app
   async getAppKeyAddress(address, origin) {
-    throw new Error("getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.");
+    throw new Error(
+      "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
+    );
   }
 }
 
