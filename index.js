@@ -1,27 +1,27 @@
 const { EventEmitter } = require('events');
 const ethUtil = require('ethereumjs-util');
-import {
+const {
   concatSig,
   SignTypedDataVersion,
   validateVersion,
   isNullish,
   typedSignatureHash,
   TypedDataUtils
-} from "@metamask/eth-sig-util";
+} = require("@metamask/eth-sig-util");
 const { TransactionFactory } = require('@ethereumjs/tx')
 
-import {
+const {
   gql,
   ApolloClient,
   createHttpLink,
   InMemoryCache,
   split,
-} from "@apollo/client";
-import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
-import { getMainDefinition } from "@apollo/client/utilities";
-import { createClient } from "graphql-ws";
-import { setContext } from "@apollo/client/link/context";
-import { v4 as uuidv4 } from "uuid";
+} = require("@apollo/client");
+const { GraphQLWsLink } = require("@apollo/client/link/subscriptions");
+const { getMainDefinition } = require("@apollo/client/utilities");
+const { createClient } = require("graphql-ws");
+const { setContext } = require("@apollo/client/link/context");
+const uuidv4 = require("uuid").v4;
 
 const type = 'Whale Financial MPC';
 const baseAPIUrl = "http://localhost:8080";
@@ -85,13 +85,8 @@ class WhaleKeyring extends EventEmitter {
     );
 
     const authLink = setContext(async (_, { headers }) => {
-
-      return {
-        headers: {
-          ...headers,
-          authorization: `Bearer ${accessToken}`,
-        },
-      };
+      headers.authorization = `Bearer ${accessToken}`;
+      return headers;
     });
 
     // The split function takes three parameters:
