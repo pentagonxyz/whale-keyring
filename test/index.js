@@ -36,15 +36,15 @@ describe('simple-keyring', function () {
   describe('#serialize an empty access token.', function () {
     it('serializes an empty string', async function () {
       const output = await keyring.serialize();
-      expect(output).toBe("");
+      expect(output).toBe('');
     });
   });
 
   describe('#deserialize an access token', function () {
     it('serializes what it deserializes', async function () {
-      await keyring.deserialize("exampleAccessToken");
+      await keyring.deserialize('exampleAccessToken');
       const serialized = await keyring.serialize();
-      expect(serialized).toBe("exampleAccessToken");
+      expect(serialized).toBe('exampleAccessToken');
     });
   });
 
@@ -463,14 +463,8 @@ describe('simple-keyring', function () {
 
   describe('#decryptMessage', function () {
     const address = '0xbe93f9bacbcffc8ee6663f2647917ed7a20a57bb';
-    const privateKey = Buffer.from(
-      '6969696969696969696969696969696969696969696969696969696969696969',
-      'hex',
-    );
-    const privKeyHex = ethUtil.bufferToHex(privateKey);
 
     it('is not implemented', async function () {
-      await keyring.deserialize([privKeyHex]);
       await expect(keyring.decryptMessage(address, {})).rejects.toThrow(
         "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
       );
@@ -483,30 +477,13 @@ describe('simple-keyring', function () {
       '6969696969696969696969696969696969696969696969696969696969696969',
       'hex',
     );
-    const publicKey = 'GxuMqoE2oHsZzcQtv/WMNB3gCH2P6uzynuwO1P0MM1U=';
-    const privKeyHex = ethUtil.bufferToHex(privateKey);
 
-    it('returns the expected value', async function () {
-      await keyring.deserialize([privKeyHex]);
-      const encryptionPublicKey = await keyring.getEncryptionPublicKey(
-        address,
-        privateKey,
+    it('is not implemented', async function () {
+      await expect(
+        keyring.getEncryptionPublicKey(address, privateKey),
+      ).rejects.toThrow(
+        "getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.",
       );
-      expect(publicKey).toBe(encryptionPublicKey);
-    });
-
-    it('throw error if address is blank', async function () {
-      await keyring.deserialize([privKeyHex]);
-      await expect(
-        keyring.getEncryptionPublicKey('', privateKey),
-      ).rejects.toThrow('Must specify address.');
-    });
-
-    it('throw error if address is not present in the keyring', async function () {
-      await keyring.deserialize([privKeyHex]);
-      await expect(
-        keyring.getEncryptionPublicKey(notKeyringAddress, privateKey),
-      ).rejects.toThrow('Simple Keyring - Unable to find matching address.');
     });
   });
 
