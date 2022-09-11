@@ -3,7 +3,6 @@ const ethUtil = require('ethereumjs-util');
 const {
   concatSig,
   SignTypedDataVersion,
-  isNullish,
   typedSignatureHash,
   TypedDataUtils,
 } = require('@metamask/eth-sig-util');
@@ -311,9 +310,9 @@ class WhaleKeyring extends EventEmitter {
    */
   async _signTypedData({ address, data, version }) {
     this.validateVersion(version);
-    if (isNullish(data)) {
+    if (this.isNullish(data)) {
       throw new Error('Missing data parameter');
-    } else if (isNullish(address)) {
+    } else if (this.isNullish(address)) {
       throw new Error('Missing private key parameter');
     }
 
@@ -345,6 +344,16 @@ class WhaleKeyring extends EventEmitter {
         )}`,
       );
     }
+  }
+
+  /**
+   * Returns `true` if the given value is nullish.
+   *
+   * @param value - The value being checked.
+   * @returns Whether the value is nullish.
+   */
+  isNullish(value) {
+    return value === null || value === undefined;
   }
 
   // get public key for nacl
