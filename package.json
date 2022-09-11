@@ -1,21 +1,20 @@
 {
-  "name": "eth-simple-keyring",
+  "name": "whale-keyring",
   "version": "4.2.0",
-  "description": "A simple standard interface for a series of Ethereum private keys.",
+  "description": "Whale Financial MPC keyring for Ethereum and other EVM-based chains.",
   "keywords": [
     "ethereum",
     "keyring"
   ],
-  "homepage": "https://github.com/MetaMask/eth-simple-keyring#readme",
+  "homepage": "https://github.com/pentagonxyz/whale-keyring#readme",
   "bugs": {
-    "url": "https://github.com/MetaMask/eth-simple-keyring/issues"
+    "url": "https://github.com/pentagonxyz/whale-keyring/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/eth-simple-keyring.git"
+    "url": "https://github.com/pentagonxyz/whale-keyring.git"
   },
   "license": "ISC",
-  "author": "Dan Finlay",
   "main": "index.js",
   "files": [
     "index.js"
@@ -30,9 +29,13 @@
     "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write"
   },
   "dependencies": {
+    "@apollo/client": "^3.5.10",
+    "@ethereumjs/tx": "^3.2.0",
     "@metamask/eth-sig-util": "^4.0.0",
     "ethereumjs-util": "^7.0.9",
-    "randombytes": "^2.1.0"
+    "graphql-ws": "^5.9.0",
+    "randombytes": "^2.1.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@ethereumjs/tx": "^3.1.1",

@@ -1,107 +1,265 @@
 const { EventEmitter } = require('events');
 const ethUtil = require('ethereumjs-util');
-const randomBytes = require('randombytes');
-
-const type = 'Simple Key Pair';
-const {
+import {
   concatSig,
-  decrypt,
-  getEncryptionPublicKey,
-  normalize,
-  personalSign,
-  signTypedData,
   SignTypedDataVersion,
-} = require('@metamask/eth-sig-util');
+  validateVersion,
+  isNullish,
+  typedSignatureHash,
+  TypedDataUtils
+} from "@metamask/eth-sig-util";
+const { TransactionFactory } = require('@ethereumjs/tx')
 
-function generateKey() {
-  const privateKey = randomBytes(32);
-  // I don't think this is possible, but this validation was here previously,
-  // so it has been preserved just in case.
-  // istanbul ignore next
-  if (!ethUtil.isValidPrivate(privateKey)) {
-    throw new Error(
-      'Private key does not satisfy the curve requirements (ie. it is invalid)',
-    );
+import {
+  gql,
+  ApolloClient,
+  createHttpLink,
+  InMemoryCache,
+  split,
+} from "@apollo/client";
+import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
+import { getMainDefinition } from "@apollo/client/utilities";
+import { createClient } from "graphql-ws";
+import { setContext } from "@apollo/client/link/context";
+import { v4 as uuidv4 } from "uuid";
+
+const type = 'Whale Financial MPC';
+const baseAPIUrl = "http://localhost:8080";
+
+const httpLink = createHttpLink({
+  uri: `${baseAPIUrl}/graphql`,
+  credentials: "include",
+});
+
+const [apiProtocol, apiPathname] = baseAPIUrl.split("://");
+
+const CREATE_WALLET = gql`
+  mutation CreateWallet($data: CreateOneWalletInput!) {
+    createWallet(data: $data) {
+      id
+      name
+      address
+      currency
+    }
   }
-  return privateKey;
-}
+`;
 
-class SimpleKeyring extends EventEmitter {
-  constructor(opts) {
+const LIST_WALLETS = gql`
+  query ListWallets {
+    wallets {
+      id
+      name
+      currency
+      blockchain
+      address
+      keyQuorum {
+        address
+      }
+    }
+  }
+`;
+
+const SIGN_MESSAGE = gql`
+  mutation SignMessage($data: SignOneMessageInput!) {
+    signMessage(data: $data) {
+      r
+      s
+      v
+    }
+  }
+`;
+
+class WhaleKeyring extends EventEmitter {
+  constructor(accessToken) {
     super();
     this.type = type;
-    this._wallets = [];
-    this.deserialize(opts);
-  }
+    this.deserialize(accessToken);
 
-  async serialize() {
-    return this._wallets.map(({ privateKey }) => privateKey.toString('hex'));
-  }
+    const wsProtocol = apiProtocol === "https" ? "wss" : "ws";
 
-  async deserialize(privateKeys = []) {
-    this._wallets = privateKeys.map((hexPrivateKey) => {
-      const strippedHexPrivateKey = ethUtil.stripHexPrefix(hexPrivateKey);
-      const privateKey = Buffer.from(strippedHexPrivateKey, 'hex');
-      const publicKey = ethUtil.privateToPublic(privateKey);
-      return { privateKey, publicKey };
+    // @todo add authentication over WebSocket
+    const wsLink = new GraphQLWsLink(
+      createClient({
+        url: `${wsProtocol}://${apiPathname}/graphql`,
+      })
+    );
+
+    const authLink = setContext(async (_, { headers }) => {
+
+      return {
+        headers: {
+          ...headers,
+          authorization: `Bearer ${accessToken}`,
+        },
+      };
+    });
+
+    // The split function takes three parameters:
+    //
+    // * A function that's called for each operation to execute
+    // * The Link to use for an operation if the function returns a "truthy" value
+    // * The Link to use for an operation if the function returns a "falsy" value
+    const splitLink = split(
+      ({ query }) => {
+        const definition = getMainDefinition(query);
+        return definition.kind === "OperationDefinition" && definition.operation === "subscription";
+      },
+      wsLink,
+      httpLink
+    );
+
+    this.apolloClient = new ApolloClient({
+      cache: new InMemoryCache(),
+      link: authLink.concat(splitLink),
     });
   }
 
+  // Not really serializing anything but we'll call it this to keep things similar to MM
+  async serialize() {
+    return this.accessToken;
+  }
+
+  // Not really deserializing anything but we'll call it this to keep things similar to MM
+  async deserialize(accessToken) {
+    this.accessToken = accessToken;
+  }
+
   async addAccounts(n = 1) {
+    const prevAccountCount = (await this.getAccounts()).length;
     const newWallets = [];
     for (let i = 0; i < n; i++) {
-      const privateKey = generateKey();
-      const publicKey = ethUtil.privateToPublic(privateKey);
-      newWallets.push({ privateKey, publicKey });
+      const newAccount = await this.apolloClient.mutate({
+        mutation: CREATE_WALLET,
+        variables: {
+          data: {
+            sessionId: uuidv4(),
+            name: "Account #" + (prevAccountCount + 1 + i) + " (" + (new Date()).toLocaleString('en-GB', { timeZone: 'UTC' }) + " UTC)",
+            parties: 3,
+            threshold: 2,
+            blockchain: 'ETHEREUM',
+            currency: "USD",
+          },
+        }
+      });
+
+      newWallets.push(newAccount.address);
     }
-    this._wallets = this._wallets.concat(newWallets);
-    const hexWallets = newWallets.map(({ publicKey }) =>
-      ethUtil.bufferToHex(ethUtil.publicToAddress(publicKey)),
-    );
-    return hexWallets;
+    return newWallets;
   }
 
   async getAccounts() {
-    return this._wallets.map(({ publicKey }) =>
-      ethUtil.bufferToHex(ethUtil.publicToAddress(publicKey)),
-    );
+    const wallets = await this.apolloClient.query({
+      query: LIST_WALLETS
+    });
+    return wallets.map(({ address }) => address);
   }
 
   // tx is an instance of the ethereumjs-transaction class.
-  async signTransaction(address, tx, opts = {}) {
-    const privKey = this._getPrivateKeyFor(address, opts);
-    const signedTx = tx.sign(privKey);
-    // Newer versions of Ethereumjs-tx are immutable and return a new tx object
-    return signedTx === undefined ? tx : signedTx;
+  signTransaction (address, tx) {
+    let rawTxHex
+    // transactions built with older versions of ethereumjs-tx have a
+    // getChainId method that newer versions do not. Older versions are mutable
+    // while newer versions default to being immutable. Expected shape and type
+    // of data for v, r and s differ (Buffer (old) vs BN (new))
+    if (typeof tx.getChainId === 'function') {
+      // In this version of ethereumjs-tx we must add the chainId in hex format
+      // to the initial v value. The chainId must be included in the serialized
+      // transaction which is only communicated to ethereumjs-tx in this
+      // value. In newer versions the chainId is communicated via the 'Common'
+      // object.
+      tx.v = ethUtil.bufferToHex(tx.getChainId())
+      tx.r = '0x00'
+      tx.s = '0x00'
+
+      rawTxHex = tx.serialize().toString('hex')
+
+      return this._signTransaction(address, rawTxHex, (payload) => {
+        tx.v = Buffer.from(payload.v, 'hex')
+        tx.r = Buffer.from(payload.r, 'hex')
+        tx.s = Buffer.from(payload.s, 'hex')
+        return tx
+      })
+    }
+
+    // The below `encode` call is only necessary for legacy transactions, as `getMessageToSign`
+    // calls `rlp.encode` internally for non-legacy transactions. As per the "Transaction Execution"
+    // section of the ethereum yellow paper, transactions need to be "well-formed RLP, with no additional
+    // trailing bytes".
+
+    // Note also that `getMessageToSign` will return valid RLP for all transaction types, whereas the
+    // `serialize` method will not for any transaction type except legacy. This is because `serialize` includes
+    // empty r, s and v values in the encoded rlp. This is why we use `getMessageToSign` here instead of `serialize`.
+    const messageToSign = tx.getMessageToSign(false)
+
+    rawTxHex = Buffer.isBuffer(messageToSign)
+      ? messageToSign.toString('hex')
+      : ethUtil.rlp.encode(messageToSign).toString('hex')
+
+    return this._signTransaction(address, rawTxHex, (payload) => {
+      // Because tx will be immutable, first get a plain javascript object that
+      // represents the transaction. Using txData here as it aligns with the
+      // nomenclature of ethereumjs/tx.
+      const txData = tx.toJSON()
+      // The fromTxData utility expects a type to support transactions with a type other than 0
+      txData.type = tx.type
+      // The fromTxData utility expects v,r and s to be hex prefixed
+      txData.v = ethUtil.addHexPrefix(payload.v)
+      txData.r = ethUtil.addHexPrefix(payload.r)
+      txData.s = ethUtil.addHexPrefix(payload.s)
+      // Adopt the 'common' option from the original transaction and set the
+      // returned object to be frozen if the original is frozen.
+      return TransactionFactory.fromTxData(txData, { common: tx.common, freeze: Object.isFrozen(tx) })
+    })
+  }
+
+  _signTransaction (address, rawTxHex, handleSigning) {
+    return new Promise(async (resolve, reject) => {
+      const payload = await this._signData(address, rawTxHex);
+
+      const newOrMutatedTx = handleSigning(payload)
+      const valid = newOrMutatedTx.verifySignature()
+      if (valid) {
+        resolve(newOrMutatedTx)
+      } else {
+        reject(new Error('Whale Financial MPC: The transaction signature is not valid'))
+      }
+    })
+  }
+
+  _signData(address, message) {
+    return this.apolloClient.mutate({
+      mutation: SIGN_MESSAGE,
+      variables: {
+        data: {
+          address,
+          message
+        },
+      }
+    });
   }
 
   // For eth_sign, we need to sign arbitrary data:
   async signMessage(address, data, opts = {}) {
-    const message = ethUtil.stripHexPrefix(data);
-    const privKey = this._getPrivateKeyFor(address, opts);
-    const msgSig = ethUtil.ecsign(Buffer.from(message, 'hex'), privKey);
+    const msgSig = await this._signData(address, data);
     const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
     return rawMsgSig;
   }
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, opts = {}) {
-    const privKey = this._getPrivateKeyFor(address, opts);
-    const privateKey = Buffer.from(privKey, 'hex');
-    const sig = personalSign({ privateKey, data: msgHex });
-    return sig;
+    let msgHashHex = ethUtil.bufferToHex(ethUtil.hashPersonalMessage(Buffer.from(msgHex, 'hex')));
+    const msgSig = await this._signData(address, msgHashHex);
+    const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
+    return rawMsgSig;
   }
 
   // For eth_decryptMessage:
   async decryptMessage(withAccount, encryptedData) {
-    const wallet = this._getWalletForAccount(withAccount);
-    const privateKey = ethUtil.stripHexPrefix(wallet.privateKey);
-    const sig = decrypt({ privateKey, encryptedData });
-    return sig;
+    throw new Error("decryptMessage is not implemented in Whale Financial's WhaleKeyring.");
   }
 
   // personal_signTypedData, signs data along with the schema
-  async signTypedData(
+  signTypedData(
     withAccount,
     typedData,
     opts = { version: SignTypedDataVersion.V1 },
@@ -111,89 +269,57 @@ class SimpleKeyring extends EventEmitter {
       ? opts.version
       : SignTypedDataVersion.V1;
 
-    const privateKey = this._getPrivateKeyFor(withAccount, opts);
-    return signTypedData({ privateKey, data: typedData, version });
+    return this._signTypedData({ address: withAccount, data: typedData, version });
+  }
+
+  /**
+   * Sign typed data according to EIP-712. The signing differs based upon the `version`.
+   *
+   * V1 is based upon [an early version of EIP-712](https://github.com/ethereum/EIPs/pull/712/commits/21abe254fe0452d8583d5b132b1d7be87c0439ca)
+   * that lacked some later security improvements, and should generally be neglected in favor of
+   * later versions.
+   *
+   * V3 is based on [EIP-712](https://eips.ethereum.org/EIPS/eip-712), except that arrays and
+   * recursive data structures are not supported.
+   *
+   * V4 is based on [EIP-712](https://eips.ethereum.org/EIPS/eip-712), and includes full support of
+   * arrays and recursive data structures.
+   *
+   * @param options - The signing options.
+   * @param options.privateKey - The private key to sign with.
+   * @param options.data - The typed data to sign.
+   * @param options.version - The signing version to use.
+   * @returns The '0x'-prefixed hex encoded signature.
+   */
+  async _signTypedData({ address, data, version }) {
+    validateVersion(version);
+    if (isNullish(data)) {
+      throw new Error('Missing data parameter');
+    } else if (isNullish(address)) {
+      throw new Error('Missing private key parameter');
+    }
+
+    const messageHash =
+      version === SignTypedDataVersion.V1
+        ? Buffer.from(typedSignatureHash(data), 'hex')
+        : TypedDataUtils.eip712Hash(
+            data,
+            version,
+          );
+    const sig = this._signData(address, messageHash);
+    return concatSig(ethUtil.toBuffer(sig.v), sig.r, sig.s);
   }
 
   // get public key for nacl
   async getEncryptionPublicKey(withAccount, opts = {}) {
-    const privKey = this._getPrivateKeyFor(withAccount, opts);
-    const publicKey = getEncryptionPublicKey(privKey);
-    return publicKey;
-  }
-
-  _getPrivateKeyFor(address, opts = {}) {
-    if (!address) {
-      throw new Error('Must specify address.');
-    }
-    const wallet = this._getWalletForAccount(address, opts);
-    return wallet.privateKey;
+    throw new Error("getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.");
   }
 
   // returns an address specific to an app
   async getAppKeyAddress(address, origin) {
-    if (!origin || typeof origin !== 'string') {
-      throw new Error(`'origin' must be a non-empty string`);
-    }
-    const wallet = this._getWalletForAccount(address, {
-      withAppKeyOrigin: origin,
-    });
-    const appKeyAddress = normalize(
-      ethUtil.publicToAddress(wallet.publicKey).toString('hex'),
-    );
-    return appKeyAddress;
-  }
-
-  // exportAccount should return a hex-encoded private key:
-  async exportAccount(address, opts = {}) {
-    const wallet = this._getWalletForAccount(address, opts);
-    return wallet.privateKey.toString('hex');
-  }
-
-  removeAccount(address) {
-    if (
-      !this._wallets
-        .map(({ publicKey }) =>
-          ethUtil.bufferToHex(ethUtil.publicToAddress(publicKey)).toLowerCase(),
-        )
-        .includes(address.toLowerCase())
-    ) {
-      throw new Error(`Address ${address} not found in this keyring`);
-    }
-
-    this._wallets = this._wallets.filter(
-      ({ publicKey }) =>
-        ethUtil
-          .bufferToHex(ethUtil.publicToAddress(publicKey))
-          .toLowerCase() !== address.toLowerCase(),
-    );
-  }
-
-  /**
-   * @private
-   */
-  _getWalletForAccount(account, opts = {}) {
-    const address = normalize(account);
-    let wallet = this._wallets.find(
-      ({ publicKey }) =>
-        ethUtil.bufferToHex(ethUtil.publicToAddress(publicKey)) === address,
-    );
-    if (!wallet) {
-      throw new Error('Simple Keyring - Unable to find matching address.');
-    }
-
-    if (opts.withAppKeyOrigin) {
-      const { privateKey } = wallet;
-      const appKeyOriginBuffer = Buffer.from(opts.withAppKeyOrigin, 'utf8');
-      const appKeyBuffer = Buffer.concat([privateKey, appKeyOriginBuffer]);
-      const appKeyPrivateKey = ethUtil.keccak(appKeyBuffer, 256);
-      const appKeyPublicKey = ethUtil.privateToPublic(appKeyPrivateKey);
-      wallet = { privateKey: appKeyPrivateKey, publicKey: appKeyPublicKey };
-    }
-
-    return wallet;
+    throw new Error("getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.");
   }
 }
 
-SimpleKeyring.type = type;
-module.exports = SimpleKeyring;
+WhaleKeyring.type = type;
+module.exports = WhaleKeyring;
