@@ -33,10 +33,10 @@ describe('simple-keyring', function () {
     });
   });
 
-  describe('#serialize an empty access token.', function () {
-    it('serializes an empty string', async function () {
+  describe('#serialize an undefined access token.', function () {
+    it('serializes an undefined value', async function () {
       const output = await keyring.serialize();
-      expect(output).toBe('');
+      expect(output).toBe(undefined);
     });
   });
 

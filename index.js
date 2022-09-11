@@ -323,7 +323,7 @@ class WhaleKeyring extends EventEmitter {
       version === SignTypedDataVersion.V1
         ? Buffer.from(typedSignatureHash(data), 'hex')
         : TypedDataUtils.eip712Hash(data, version);
-    const sig = this._signData(address, messageHash);
+    const sig = await this._signData(address, messageHash);
     return concatSig(ethUtil.toBuffer(sig.v), sig.r, sig.s);
   }
 
