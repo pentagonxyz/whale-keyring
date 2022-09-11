@@ -61,11 +61,13 @@ const LIST_WALLETS = gql`
 `;
 
 const SIGN_MESSAGE = gql`
-  mutation SignMessage($data: SignOneMessageInput!) {
+  mutation SignMessage($data: SignMessageInput!) {
     signMessage(data: $data) {
+      fullSig
       r
       s
       v
+      publicKey
     }
   }
 `;
@@ -242,7 +244,7 @@ class WhaleKeyring extends EventEmitter {
       variables: {
         data: {
           address,
-          message,
+          content: message
         },
       },
     });
@@ -368,6 +370,13 @@ class WhaleKeyring extends EventEmitter {
   async getAppKeyAddress(_address, _origin) {
     throw new Error(
       "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
+    );
+  }
+
+  // exportAccount should return a hex-encoded private key:
+  async exportAccount(address, opts = {}) {
+    throw new Error(
+      "exportAccount is not implemented in Whale Financial's WhaleKeyring.",
     );
   }
 }

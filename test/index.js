@@ -8,7 +8,7 @@ const {
   TransactionFactory,
   Transaction: EthereumTx,
 } = require('@ethereumjs/tx');
-const SimpleKeyring = require('..');
+const WhaleKeyring = require('..');
 
 const TYPE_STR = 'Whale Financial MPC';
 
@@ -23,35 +23,34 @@ const notKeyringAddress = '0xbD20F6F5F1616947a39E11926E78ec94817B3931';
 describe('simple-keyring', function () {
   let keyring;
   beforeEach(function () {
-    keyring = new SimpleKeyring();
+    keyring = new WhaleKeyring();
   });
 
   describe('Keyring.type', function () {
     it('is a class property that returns the type string.', function () {
-      const { type } = SimpleKeyring;
+      const { type } = WhaleKeyring;
       expect(type).toBe(TYPE_STR);
     });
   });
 
-  describe('#serialize empty wallets.', function () {
-    it('serializes an empty array', async function () {
+  describe('#serialize an empty access token.', function () {
+    it('serializes an empty string', async function () {
       const output = await keyring.serialize();
-      expect(output).toHaveLength(0);
+      expect(output).toBe("");
     });
   });
 
-  describe('#deserialize a private key', function () {
+  describe('#deserialize an access token', function () {
     it('serializes what it deserializes', async function () {
-      await keyring.deserialize([testAccount.key]);
+      await keyring.deserialize("exampleAccessToken");
       const serialized = await keyring.serialize();
-      expect(serialized).toHaveLength(1);
-      expect(serialized[0]).toBe(ethUtil.stripHexPrefix(testAccount.key));
+      expect(serialized).toBe("exampleAccessToken");
     });
   });
 
   describe('#constructor with a private key', function () {
     it('has the correct addresses', async function () {
-      const newKeyring = new SimpleKeyring([testAccount.key]);
+      const newKeyring = new WhaleKeyring([testAccount.key]);
       const accounts = await newKeyring.getAccounts();
       expect(accounts).toStrictEqual([testAccount.address]);
     });
@@ -590,9 +589,9 @@ describe('simple-keyring', function () {
   describe('getAppKeyAddress', function () {
     it('should be unimplemented', async function () {
       const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
+      const whaleKeyring = new WhaleKeyring([testAccount.key]);
       await expect(
-        simpleKeyring.getAppKeyAddress(address, 'someapp.origin.io'),
+        whaleKeyring.getAppKeyAddress(address, 'someapp.origin.io'),
       ).rejects.toThrow(
         "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
       );
@@ -602,8 +601,8 @@ describe('simple-keyring', function () {
   describe('exportAccount', function () {
     it('should be unimplemented', async function () {
       const { address } = testAccount;
-      const simpleKeyring = new SimpleKeyring([testAccount.key]);
-      await expect(simpleKeyring.exportAccount(address)).rejects.toThrow(
+      const whaleKeyring = new WhaleKeyring([testAccount.key]);
+      await expect(whaleKeyring.exportAccount(address)).rejects.toThrow(
         "exportAccount is not implemented in Whale Financial's WhaleKeyring.",
       );
     });
