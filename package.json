@@ -66,5 +66,8 @@
       "secp256k1": true,
       "@lavamoat/preinstall-always-fail": false
     }
+  },
+  "resolutions": {
+    "**/zen-observable-ts": "https://github.com/pentagonxyz/zen-observable-ts.git"
   }
 }
