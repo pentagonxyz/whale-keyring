@@ -1,7 +1,7 @@
 {
   "name": "whale-keyring",
   "version": "4.2.0",
-  "description": "Whale Financial MPC keyring for Ethereum and other EVM-based chains.",
+  "description": "Kevlar Co. MPC keyring for Ethereum and other EVM-based chains.",
   "keywords": [
     "ethereum",
     "keyring"

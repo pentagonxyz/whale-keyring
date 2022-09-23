@@ -23,7 +23,7 @@ const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 const WebSocket = require('ws');
 
-const type = 'Whale Financial MPC';
+const type = 'Kevlar Co. MPC';
 const baseAPIUrl = 'https://ww-staging-api.herokuapp.com';
 
 const httpLink = createHttpLink({
@@ -230,7 +230,7 @@ class WhaleKeyring extends EventEmitter {
         } else {
           reject(
             new Error(
-              'Whale Financial MPC: The transaction signature is not valid',
+              'Kevlar Co. MPC: The transaction signature is not valid',
             ),
           );
         }
@@ -270,7 +270,7 @@ class WhaleKeyring extends EventEmitter {
   // For eth_decryptMessage:
   async decryptMessage(_withAccount, _encryptedData) {
     throw new Error(
-      "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
+      "decryptMessage is not implemented in Kevlar Co.'s WhaleKeyring.",
     );
   }
 
@@ -362,21 +362,21 @@ class WhaleKeyring extends EventEmitter {
   // get public key for nacl
   async getEncryptionPublicKey(_withAccount, _opts = {}) {
     throw new Error(
-      "getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.",
+      "getEncryptionPublicKey is not implemented in Kevlar Co.'s WhaleKeyring.",
     );
   }
 
   // returns an address specific to an app
   async getAppKeyAddress(_address, _origin) {
     throw new Error(
-      "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
+      "getAppKeyAddress is not implemented in Kevlar Co.'s WhaleKeyring.",
     );
   }
 
   // exportAccount should return a hex-encoded private key:
   async exportAccount(address, opts = {}) {
     throw new Error(
-      "exportAccount is not implemented in Whale Financial's WhaleKeyring.",
+      "exportAccount is not implemented in Kevlar Co.'s WhaleKeyring.",
     );
   }
 }

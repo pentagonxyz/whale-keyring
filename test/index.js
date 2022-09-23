@@ -10,7 +10,7 @@ const {
 } = require('@ethereumjs/tx');
 const WhaleKeyring = require('..');
 
-const TYPE_STR = 'Whale Financial MPC';
+const TYPE_STR = 'Kevlar Co. MPC';
 
 // Sample account:
 const testAccount = {
@@ -466,7 +466,7 @@ describe('simple-keyring', function () {
 
     it('is not implemented', async function () {
       await expect(keyring.decryptMessage(address, {})).rejects.toThrow(
-        "decryptMessage is not implemented in Whale Financial's WhaleKeyring.",
+        "decryptMessage is not implemented in Kevlar Co.'s WhaleKeyring.",
       );
     });
   });
@@ -482,7 +482,7 @@ describe('simple-keyring', function () {
       await expect(
         keyring.getEncryptionPublicKey(address, privateKey),
       ).rejects.toThrow(
-        "getEncryptionPublicKey is not implemented in Whale Financial's WhaleKeyring.",
+        "getEncryptionPublicKey is not implemented in Kevlar Co.'s WhaleKeyring.",
       );
     });
   });
@@ -570,7 +570,7 @@ describe('simple-keyring', function () {
       await expect(
         whaleKeyring.getAppKeyAddress(address, 'someapp.origin.io'),
       ).rejects.toThrow(
-        "getAppKeyAddress is not implemented in Whale Financial's WhaleKeyring.",
+        "getAppKeyAddress is not implemented in Kevlar Co.'s WhaleKeyring.",
       );
     });
   });
@@ -580,7 +580,7 @@ describe('simple-keyring', function () {
       const { address } = testAccount;
       const whaleKeyring = new WhaleKeyring([testAccount.key]);
       await expect(whaleKeyring.exportAccount(address)).rejects.toThrow(
-        "exportAccount is not implemented in Whale Financial's WhaleKeyring.",
+        "exportAccount is not implemented in Kevlar Co.'s WhaleKeyring.",
       );
     });
   });
