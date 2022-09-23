@@ -21,7 +21,6 @@ const { createClient } = require('graphql-ws');
 const { setContext } = require('@apollo/client/link/context');
 const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
-const WebSocket = require('ws');
 
 const type = 'Kevlar Co. MPC';
 const baseAPIUrl = 'https://ww-staging-api.herokuapp.com';
