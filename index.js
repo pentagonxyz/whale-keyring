@@ -23,7 +23,7 @@ const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
 const type = 'Kevlar Co. MPC';
-const baseAPIUrl = 'https://ww-staging-api.herokuapp.com';
+const baseAPIUrl = 'https://api-staging.kevlarco.com';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
