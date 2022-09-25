@@ -130,7 +130,7 @@ class WhaleKeyring extends EventEmitter {
     const prevAccountCount = (await this.getAccounts()).length;
     const newWallets = [];
     for (let i = 0; i < n; i++) {
-      const newAccount = await this.apolloClient.mutate({
+      const res = await this.apolloClient.mutate({
         mutation: CREATE_WALLET,
         variables: {
           data: {
@@ -146,7 +146,7 @@ class WhaleKeyring extends EventEmitter {
         },
       });
 
-      newWallets.push(newAccount.address);
+      newWallets.push(res.data.createWallet.address);
     }
     return newWallets;
   }
