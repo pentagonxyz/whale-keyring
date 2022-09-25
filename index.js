@@ -152,10 +152,10 @@ class WhaleKeyring extends EventEmitter {
   }
 
   async getAccounts() {
-    const wallets = await this.apolloClient.query({
+    const res = await this.apolloClient.query({
       query: LIST_WALLETS,
     });
-    return wallets.map(({ address }) => address);
+    return res.data.wallets.map(({ address }) => address);
   }
 
   // tx is an instance of the ethereumjs-transaction class.
