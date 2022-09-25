@@ -148,7 +148,7 @@ class WhaleKeyring extends EventEmitter {
 
       newWallets.push(res.data.createWallet.address);
     }
-    this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(res.data.createWallet.address) : [res.data.createWallet.address];
+    this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(newWallets) : newWallets;
     return newWallets;
   }
 
