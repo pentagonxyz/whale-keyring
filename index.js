@@ -126,7 +126,7 @@ class WhaleKeyring extends EventEmitter {
     this.accessToken = accessToken;
   }
 
-  async addAccounts(n = 1) {
+  async addAccounts(n = 1, names) {
     const prevAccountCount = (await this.getAccounts()).length;
     const newWallets = [];
     for (let i = 0; i < n; i++) {
@@ -135,7 +135,7 @@ class WhaleKeyring extends EventEmitter {
         variables: {
           data: {
             sessionId: uuidv4(),
-            name: `Account ${
+            name: names !== undefined ? names[i] : `Account ${
               prevAccountCount + 1 + i
             } from ${new Date().toDateString()}`,
             parties: 3,
