@@ -148,6 +148,7 @@ class WhaleKeyring extends EventEmitter {
 
       newWallets.push(res.data.createWallet.address);
     }
+    this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(res.data.createWallet.address) : [res.data.createWallet.address];
     return newWallets;
   }
 
@@ -155,7 +156,8 @@ class WhaleKeyring extends EventEmitter {
     const res = await this.apolloClient.query({
       query: LIST_WALLETS,
     });
-    return res.data.wallets.map(({ address }) => address);
+    var wallets = res.data.wallets.map(({ address }) => address);
+    return this.newAccountsCache !== undefined ? wallets.concat(this.newAccountsCache.filter((item) => wallets.indexOf(item) < 0)) : wallets;
   }
 
   // tx is an instance of the ethereumjs-transaction class.
