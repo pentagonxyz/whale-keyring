@@ -135,9 +135,9 @@ class WhaleKeyring extends EventEmitter {
         variables: {
           data: {
             sessionId: uuidv4(),
-            name: `Account #${
+            name: `Account ${
               prevAccountCount + 1 + i
-            } (${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC)`,
+            } from ${new Date().toDateString()}`,
             parties: 3,
             threshold: 2,
             blockchain: 'ETHEREUM',
