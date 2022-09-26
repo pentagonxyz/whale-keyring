@@ -250,7 +250,7 @@ class WhaleKeyring extends EventEmitter {
       mutation: SIGN_MESSAGE,
       variables: {
         data: {
-          address,
+          walletAddress: address,
           content: message
         },
       },
