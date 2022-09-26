@@ -2,9 +2,7 @@ const { EventEmitter } = require('events');
 const ethUtil = require('ethereumjs-util');
 const {
   concatSig,
-  SignTypedDataVersion,
-  typedSignatureHash,
-  TypedDataUtils,
+  SignTypedDataVersion
 } = require('@metamask/eth-sig-util');
 const { TransactionFactory } = require('@ethereumjs/tx');
 
@@ -59,6 +57,24 @@ const LIST_WALLETS = gql`
   }
 `;
 
+const SIGN_TRANSACTION = gql`
+  mutation SignTransaction($data: SignOneTransactionInput!) {
+    signTransaction(data: $data) {
+      ... on Signature {
+        fullSig
+        r
+        s
+        v
+        publicKey
+      }
+
+      ... on ErrorResponse {
+        message
+      }
+    }
+  }
+`;
+
 const SIGN_MESSAGE = gql`
   mutation SignMessage($data: SignMessageInput!) {
     signMessage(data: $data) {
@@ -77,7 +93,23 @@ const SIGN_MESSAGE = gql`
   }
 `;
 
-const hexes = Array.from({ length: 256 }, (v, i) => i.toString(16).padStart(2, '0'));
+const SIGN_TYPED_DATA = gql`
+  mutation SignTypedData($data: SignTypedDataInput!) {
+    signTypedData(data: $data) {
+      ... on Signature {
+        fullSig
+        r
+        s
+        v
+        publicKey
+      }
+
+      ... on ErrorResponse {
+        message
+      }
+    }
+  }
+`;
 
 class WhaleKeyring extends EventEmitter {
   constructor(accessToken) {
@@ -185,9 +217,7 @@ class WhaleKeyring extends EventEmitter {
       tx.r = '0x00';
       tx.s = '0x00';
 
-      rawTxHex = tx.serialize().toString('hex');
-
-      return this._signTransaction(address, rawTxHex, (payload) => {
+      return this._signTransaction(address, tx, (payload) => {
         tx.v = Buffer.from(payload.v, 'hex');
         tx.r = Buffer.from(payload.r, 'hex');
         tx.s = Buffer.from(payload.s, 'hex');
@@ -195,21 +225,7 @@ class WhaleKeyring extends EventEmitter {
       });
     }
 
-    // The below `encode` call is only necessary for legacy transactions, as `getMessageToSign`
-    // calls `rlp.encode` internally for non-legacy transactions. As per the "Transaction Execution"
-    // section of the ethereum yellow paper, transactions need to be "well-formed RLP, with no additional
-    // trailing bytes".
-
-    // Note also that `getMessageToSign` will return valid RLP for all transaction types, whereas the
-    // `serialize` method will not for any transaction type except legacy. This is because `serialize` includes
-    // empty r, s and v values in the encoded rlp. This is why we use `getMessageToSign` here instead of `serialize`.
-    const messageToSign = tx.getMessageToSign(false);
-
-    rawTxHex = Buffer.isBuffer(messageToSign)
-      ? messageToSign.toString('hex')
-      : ethUtil.rlp.encode(messageToSign).toString('hex');
-
-    return this._signTransaction(address, rawTxHex, (payload) => {
+    return this._signTransaction(address, tx, (payload) => {
       // Because tx will be immutable, first get a plain javascript object that
       // represents the transaction. Using txData here as it aligns with the
       // nomenclature of ethereumjs/tx.
@@ -229,9 +245,9 @@ class WhaleKeyring extends EventEmitter {
     });
   }
 
-  _signTransaction(address, rawTxHex, handleSigning) {
+  _signTransaction(address, tx, handleSigning) {
     return new Promise((resolve, reject) => {
-      this._signData(address, this.bytesToHex(ethUtil.keccak(Buffer.from(rawTxHex, 'hex'), 256))).then(function (payload) {
+      this._signData(address, tx).then(function (payload) {
         const newOrMutatedTx = handleSigning(payload);
         const valid = newOrMutatedTx.verifySignature();
         if (valid) {
@@ -247,42 +263,43 @@ class WhaleKeyring extends EventEmitter {
     });
   }
 
-  _signData(address, message) {
-    return this.apolloClient.mutate({
-      mutation: SIGN_MESSAGE,
+  async __signTransaction(tx) {
+    var res = await this.apolloClient.mutate({
+      mutation: SIGN_TRANSACTION,
       variables: {
         data: {
-          walletAddress: address, // TODO: Make API case-insensitive
-          content: message.substring(0, 2) === "0x" ? message : "0x" + message
+          data: tx.data,
+          chainId: tx.chainId,
+          sourceWalletAddress: tx.from,
+          destination: {
+            address: tx.to
+          },
+          baseFeePerGas: tx.baseFeePerGas,
+          maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+          gasLimit: tx.gasLimit
         },
       },
     });
+    return res.data.signTransaction;
   }
 
   // For eth_sign, we need to sign arbitrary data:
   async signMessage(address, data, _opts = {}) {
-    const res = await this._signData(address, this.bytesToHex(ethUtil.keccak(Buffer.from(data, 'hex'), 256)));
-    const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
-    return rawMsgSig;
-  }
-
-  bytesToHex(uint8a) {
-    // pre-caching improves the speed 6x
-    if (!(uint8a instanceof Uint8Array)) throw new Error('Uint8Array expected');
-    let hex = '';
-    for (let i = 0; i < uint8a.length; i++) {
-      hex += hexes[uint8a[i]];
-    }
-    return hex;
+    throw "eth_sign is not supported by Kevlar Co.'s WhaleKeyring due to potential transaction policies.";
   }
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}) {
-    const msgHashHex = ethUtil.bufferToHex(
-      ethUtil.hashPersonalMessage(Buffer.from(msgHex, 'hex')),
-    );
-    const msgSig = await this._signData(address, msgHashHex);
-    const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
+    var res = await this.apolloClient.mutate({
+      mutation: SIGN_MESSAGE,
+      variables: {
+        data: {
+          walletAddress: address,
+          content: msgHex
+        },
+      },
+    });
+    const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
     return rawMsgSig;
   }
 
@@ -338,12 +355,17 @@ class WhaleKeyring extends EventEmitter {
       throw new Error('Missing private key parameter');
     }
 
-    const messageHash =
-      version === SignTypedDataVersion.V1
-        ? Buffer.from(typedSignatureHash(data), 'hex')
-        : TypedDataUtils.eip712Hash(data, version);
-    const sig = await this._signData(address, messageHash);
-    return concatSig(ethUtil.toBuffer(sig.v), sig.r, sig.s);
+    var res = await this.apolloClient.mutate({
+      mutation: SIGN_TYPED_DATA,
+      variables: {
+        data: {
+          walletAddress: address,
+          content: data,
+          version
+        },
+      },
+    });
+    return concatSig(ethUtil.toBuffer(res.data.signTypedData.v), res.data.signTypedData.r, res.data.signTypedData.s);
   }
 
   /**
