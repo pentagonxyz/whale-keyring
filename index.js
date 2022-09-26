@@ -62,11 +62,17 @@ const LIST_WALLETS = gql`
 const SIGN_MESSAGE = gql`
   mutation SignMessage($data: SignMessageInput!) {
     signMessage(data: $data) {
-      fullSig
-      r
-      s
-      v
-      publicKey
+      ... on Signature {
+        fullSig
+        r
+        s
+        v
+        publicKey
+      }
+
+      ... on ErrorResponse {
+        message
+      }
     }
   }
 `;
