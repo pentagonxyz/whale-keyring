@@ -250,8 +250,8 @@ class WhaleKeyring extends EventEmitter {
       mutation: SIGN_MESSAGE,
       variables: {
         data: {
-          walletAddress: address,
-          content: message
+          walletAddress: address, // TODO: Make API case-insensitive
+          content: message.substring(0, 2) === "0x" ? message : "0x" + message
         },
       },
     });
