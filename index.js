@@ -77,6 +77,8 @@ const SIGN_MESSAGE = gql`
   }
 `;
 
+const hexes = Array.from({ length: 256 }, (v, i) => i.toString(16).padStart(2, '0'));
+
 class WhaleKeyring extends EventEmitter {
   constructor(accessToken) {
     super();
@@ -229,7 +231,7 @@ class WhaleKeyring extends EventEmitter {
 
   _signTransaction(address, rawTxHex, handleSigning) {
     return new Promise((resolve, reject) => {
-      this._signData(address, rawTxHex).then(function (payload) {
+      this._signData(address, this.bytesToHex(ethUtil.keccak(Buffer.from(rawTxHex, 'hex'), 256))).then(function (payload) {
         const newOrMutatedTx = handleSigning(payload);
         const valid = newOrMutatedTx.verifySignature();
         if (valid) {
@@ -259,9 +261,19 @@ class WhaleKeyring extends EventEmitter {
 
   // For eth_sign, we need to sign arbitrary data:
   async signMessage(address, data, _opts = {}) {
-    const msgSig = await this._signData(address, data);
-    const rawMsgSig = concatSig(msgSig.v, msgSig.r, msgSig.s);
+    const res = await this._signData(address, this.bytesToHex(ethUtil.keccak(Buffer.from(data, 'hex'), 256)));
+    const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
     return rawMsgSig;
+  }
+
+  bytesToHex(uint8a) {
+    // pre-caching improves the speed 6x
+    if (!(uint8a instanceof Uint8Array)) throw new Error('Uint8Array expected');
+    let hex = '';
+    for (let i = 0; i < uint8a.length; i++) {
+      hex += hexes[uint8a[i]];
+    }
+    return hex;
   }
 
   // For personal_sign, we need to prefix the message:
