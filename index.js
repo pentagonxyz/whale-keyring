@@ -247,7 +247,7 @@ class WhaleKeyring extends EventEmitter {
 
   _signTransaction(address, tx, handleSigning) {
     return new Promise((resolve, reject) => {
-      this._signData(address, tx).then(function (payload) {
+      this.__signTransaction(address, tx).then(function (payload) {
         const newOrMutatedTx = handleSigning(payload);
         const valid = newOrMutatedTx.verifySignature();
         if (valid) {
