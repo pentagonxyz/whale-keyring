@@ -276,7 +276,8 @@ class WhaleKeyring extends EventEmitter {
           },
           maxFeePerGas: tx.maxFeePerGas,
           maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-          gasLimit: tx.gasLimit
+          gasLimit: tx.gasLimit,
+          nonce: tx.nonce
         },
       },
     });
