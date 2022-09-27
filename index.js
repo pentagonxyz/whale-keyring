@@ -274,7 +274,7 @@ class WhaleKeyring extends EventEmitter {
           destination: {
             address: tx.to
           },
-          baseFeePerGas: tx.baseFeePerGas,
+          maxFeePerGas: tx.maxFeePerGas,
           maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
           gasLimit: tx.gasLimit
         },
