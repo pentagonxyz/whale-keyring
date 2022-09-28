@@ -65,7 +65,6 @@ const SIGN_TRANSACTION = gql`
         r
         s
         v
-        publicKey
       }
 
       ... on ErrorResponse {
@@ -263,21 +262,30 @@ class WhaleKeyring extends EventEmitter {
     });
   }
 
-  async __signTransaction(tx) {
+  formatUnits(input, decimals) {
+    input = input.toString();
+    return input.length > decimals ?
+      input.substring(0, input.length - decimals) + "." + input.substring(input.length - decimals) :
+      "0." + "0".repeat(decimals - input.length) + input;
+  }
+
+  async __signTransaction(address, tx) {
+    var json = tx.toJSON();
     var res = await this.apolloClient.mutate({
       mutation: SIGN_TRANSACTION,
       variables: {
         data: {
-          data: tx.data,
-          chainId: tx.chainId,
-          sourceWalletAddress: tx.from,
+          data: json.data !== "0x" ? json.data : undefined,
+          chainId: tx.chainId.toString(),
+          sourceWalletAddress: address,
           destination: {
-            address: tx.to
+            address: json.to
           },
-          maxFeePerGas: tx.maxFeePerGas,
-          maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-          gasLimit: tx.gasLimit,
-          nonce: tx.nonce
+          maxFeePerGas: json.maxFeePerGas,
+          maxPriorityFeePerGas: json.maxPriorityFeePerGas,
+          gasLimit: json.gasLimit,
+          amount: this.formatUnits(tx.value.toString(), 18),
+          nonce: json.nonce
         },
       },
     });
