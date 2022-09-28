@@ -82,7 +82,6 @@ const SIGN_MESSAGE = gql`
         r
         s
         v
-        publicKey
       }
 
       ... on ErrorResponse {
@@ -100,7 +99,6 @@ const SIGN_TYPED_DATA = gql`
         r
         s
         v
-        publicKey
       }
 
       ... on ErrorResponse {
