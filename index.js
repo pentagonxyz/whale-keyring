@@ -289,6 +289,7 @@ class WhaleKeyring extends EventEmitter {
         },
       },
     });
+    res.data.signTransaction.v -= 27;
     return res.data.signTransaction;
   }
 
