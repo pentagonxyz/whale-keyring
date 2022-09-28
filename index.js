@@ -273,6 +273,7 @@ class WhaleKeyring extends EventEmitter {
       mutation: SIGN_TRANSACTION,
       variables: {
         data: {
+          type: tx.type().toString(),
           data: json.data !== "0x" ? json.data : undefined,
           chainId: tx.chainId.toString(),
           sourceWalletAddress: address,
@@ -283,7 +284,9 @@ class WhaleKeyring extends EventEmitter {
           maxPriorityFeePerGas: json.maxPriorityFeePerGas,
           gasLimit: json.gasLimit,
           amount: this.formatUnits(tx.value.toString(), 18),
-          nonce: json.nonce
+          nonce: tx.nonce.toString(),
+          gasPrice: json.gasPrice,
+          accessList: json.accessList
         },
       },
     });
