@@ -287,6 +287,10 @@ class WhaleKeyring extends EventEmitter {
         },
       },
     });
+    if (res.data.signTransaction.r === undefined) {
+      if (res.data.signTransaction.__typename === "ErrorResponse") throw res.data.signTransaction.message;
+      throw "Unknown Kevlar API error when signing transaction.";
+    }
     res.data.signTransaction.v -= 27;
     return res.data.signTransaction;
   }
@@ -307,6 +311,10 @@ class WhaleKeyring extends EventEmitter {
         },
       },
     });
+    if (res.data.signMessage.r === undefined) {
+      if (res.data.signMessage.__typename === "ErrorResponse") throw res.data.signMessage.message;
+      throw "Unknown Kevlar API error when signing personal message.";
+    }
     const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
     return rawMsgSig;
   }
@@ -373,6 +381,10 @@ class WhaleKeyring extends EventEmitter {
         },
       },
     });
+    if (res.data.signTypedData.r === undefined) {
+      if (res.data.signTypedData.__typename === "ErrorResponse") throw res.data.signTypedData.message;
+      throw "Unknown Kevlar API error when signing typed data.";
+    }
     return concatSig(ethUtil.toBuffer(res.data.signTypedData.v), res.data.signTypedData.r, res.data.signTypedData.s);
   }
 
