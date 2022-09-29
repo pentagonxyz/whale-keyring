@@ -294,7 +294,7 @@ class WhaleKeyring extends EventEmitter {
       if (res.data.signTransaction.__typename === "ErrorResponse") throw new Error(res.data.signTransaction.message);
       throw new Error("Unknown Kevlar API error when signing transaction");
     }
-    res.data.signTransaction.v -= 27;
+    if (tx.type == 2) res.data.signTransaction.v -= 27;
     return res.data.signTransaction;
   }
 
