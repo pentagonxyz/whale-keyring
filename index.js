@@ -275,7 +275,7 @@ class WhaleKeyring extends EventEmitter {
         data: {
           type: tx.type,
           data: json.data !== "0x" ? json.data : undefined,
-          chainId: tx.chainId.toString(),
+          chainId: tx.type > 0 ? tx.chainId.toString() : tx.common._chainParams.chainId.toString(),
           sourceWalletAddress: address,
           destination: {
             address: json.to
