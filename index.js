@@ -67,6 +67,10 @@ const SIGN_TRANSACTION = gql`
         v
       }
 
+      ... on MfaSession {
+        id
+      }
+
       ... on ErrorResponse {
         message
       }
