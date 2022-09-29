@@ -290,12 +290,33 @@ class WhaleKeyring extends EventEmitter {
         },
       },
     });
-    if (res.data.signTransaction.r === undefined) {
+
+    if (res.data.signTransaction.__typename === "MfaSession") {
+      chrome.windows.create({
+        url: 'https://staging.kevlarco.com/mfa/' + res.data.signTransaction.id,
+        focused: true,
+        type: 'popup',
+        width: 400,
+        height: 700,
+      });
+      res.data.signTransaction = await new Promise((resolve, reject) => {
+        if (this.mfaResolvers === undefined) this.mfaResolvers = {};
+        this.mfaResolvers[tx.nonce.toString()] = { resolve, reject };
+      });
+    } else if (res.data.signTransaction.r === undefined) {
       if (res.data.signTransaction.__typename === "ErrorResponse") throw new Error(res.data.signTransaction.message);
       throw new Error("Unknown Kevlar API error when signing transaction");
     }
+
     if (tx.type == 2) res.data.signTransaction.v -= 27;
     return res.data.signTransaction;
+  }
+
+  mfaResolution(signatureData, errorMessage) {
+    let resolver = this.mfaResolvers[signatureData.nonce.toString()];
+    if (signatureData) resolver.resolve(signatureData);
+    else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
+    else resolver.reject(new Error("Unknown error during Kevlar MFA resolution."));
   }
 
   // For eth_sign, we need to sign arbitrary data:
