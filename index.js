@@ -306,8 +306,8 @@ class WhaleKeyring extends EventEmitter {
         height: 700,
       });
       res.data.signTransaction = await new Promise((resolve, reject) => {
-        if (MFA_RESOLVERS[address] === undefined) MFA_RESOLVERS[address] = {};
-        MFA_RESOLVERS[address][tx.nonce.toString()] = { resolve, reject };
+        if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {};
+        MFA_RESOLVERS[address.toLowerCase()][tx.nonce.toString()] = { resolve, reject };
       });
     } else if (res.data.signTransaction.r === undefined) {
       if (res.data.signTransaction.__typename === "ErrorResponse") throw new Error(res.data.signTransaction.message);
@@ -319,7 +319,7 @@ class WhaleKeyring extends EventEmitter {
   }
 
   mfaResolution(signatureData, errorMessage) {
-    let resolver = MFA_RESOLVERS[signatureData.from][signatureData.nonce.toString()];
+    let resolver = MFA_RESOLVERS[signatureData.from.toLowerCase()][signatureData.nonce.toString()];
     if (signatureData) resolver.resolve(signatureData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
     else resolver.reject(new Error("Unknown error during Kevlar MFA resolution."));
