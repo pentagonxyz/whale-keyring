@@ -199,8 +199,18 @@ class WhaleKeyring extends EventEmitter {
     const res = await this.apolloClient.query({
       query: LIST_WALLETS,
     });
+    // TODO: Check for expired access token; if so, throw error to be caught by KeyringController, who will call setLocked()
     var wallets = res.data.wallets.map(({ address }) => address);
     return this.newAccountsCache !== undefined ? wallets.concat(this.newAccountsCache.filter((item) => wallets.indexOf(item) < 0)) : wallets;
+  }
+
+  async getAccountNames() {
+    const res = await this.apolloClient.query({
+      query: LIST_WALLETS,
+    });
+    var names = {};
+    for (const wallet of res.data.wallets) names[wallet.address.toLowerCase()] = wallet.name;
+    return names;
   }
 
   // tx is an instance of the ethereumjs-transaction class.
