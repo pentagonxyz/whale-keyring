@@ -22,6 +22,7 @@ const fetch = require('cross-fetch');
 
 const type = 'Kevlar Co. MPC';
 const baseAPIUrl = 'https://api-staging.kevlarco.com';
+const baseAppUrl = 'https://staging.kevlarco.com';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
@@ -199,7 +200,6 @@ class WhaleKeyring extends EventEmitter {
     const res = await this.apolloClient.query({
       query: LIST_WALLETS,
     });
-    // TODO: Check for expired access token; if so, throw error to be caught by KeyringController, who will call setLocked()
     var wallets = res.data.wallets.map(({ address }) => address);
     return this.newAccountsCache !== undefined ? wallets.concat(this.newAccountsCache.filter((item) => wallets.indexOf(item) < 0)) : wallets;
   }
@@ -309,7 +309,7 @@ class WhaleKeyring extends EventEmitter {
 
     if (res.data.signTransaction.__typename === "MfaSession") {
       chrome.windows.create({
-        url: 'https://staging.kevlarco.com/mfa/' + res.data.signTransaction.id,
+        url: baseAppUrl + '/mfa/' + res.data.signTransaction.id,
         focused: true,
         type: 'popup',
         width: 400,
@@ -479,6 +479,10 @@ class WhaleKeyring extends EventEmitter {
     throw new Error(
       "exportAccount is not implemented in Kevlar Co.'s WhaleKeyring.",
     );
+  }
+
+  logout() {
+    return fetch(baseAppUrl + "/logout");
   }
 }
 
