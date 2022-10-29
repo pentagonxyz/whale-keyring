@@ -312,7 +312,7 @@ class WhaleKeyring extends EventEmitter {
         url: baseAppUrl + '/mfa/' + res.data.signTransaction.id,
         focused: true,
         type: 'popup',
-        width: 400,
+        width: 600,
         height: 700,
       });
       res.data.signTransaction = await new Promise((resolve, reject) => {
