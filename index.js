@@ -113,6 +113,12 @@ const SIGN_TYPED_DATA = gql`
   }
 `;
 
+const UPDATE_WALLET = gql`
+  mutation UpdateWallet($where: WalletWhereUniqueInput!, $data: UpdateOneWalletInput!) {
+    updateWallet(where: $where, data: $data) {}
+  }
+`;
+
 const MFA_RESOLVERS = {};
 
 class WhaleKeyring extends EventEmitter {
@@ -194,6 +200,20 @@ class WhaleKeyring extends EventEmitter {
     }
     this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(newWallets) : newWallets;
     return newWallets;
+  }
+
+  async renameAccount(address, name) {
+    await this.apolloClient.mutate({
+      mutation: UPDATE_WALLET,
+      variables: {
+        where: {
+          address
+        },
+        data: {
+          name: { set: name }
+        }
+      },
+    });
   }
 
   async getAccounts() {
