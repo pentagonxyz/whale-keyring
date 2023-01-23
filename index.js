@@ -21,8 +21,8 @@ const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
 const type = 'Waymont Co. MPC';
-const baseAPIUrl = 'https://api-staging.waymont.co';
-const baseAppUrl = 'https://staging.waymont.co';
+const baseAPIUrl = 'https://waymont-api-dev.kevlarco.com';
+const baseAppUrl = 'https://dev.kevlarco.com';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
