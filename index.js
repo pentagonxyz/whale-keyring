@@ -20,9 +20,9 @@ const { setContext } = require('@apollo/client/link/context');
 const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
-const type = 'Kevlar Co. MPC';
-const baseAPIUrl = 'https://api-staging.kevlarco.com';
-const baseAppUrl = 'https://staging.kevlarco.com';
+const type = 'Waymont Co. MPC';
+const baseAPIUrl = 'https://api-staging.waymont.co';
+const baseAppUrl = 'https://staging.waymont.co';
 
 const httpLink = createHttpLink({
   uri: `${baseAPIUrl}/graphql`,
@@ -58,16 +58,9 @@ const LIST_WALLETS = gql`
   }
 `;
 
-const SIGN_TRANSACTION = gql`
-  mutation SignTransaction($data: SignOneTransactionInput!) {
-    signTransaction(data: $data) {
-      ... on Signature {
-        fullSig
-        r
-        s
-        v
-      }
-
+const CREATE_WALLET_SIGNING_REQUEST = gql`
+  mutation CreateWalletSigningRequest($data: CreateWalletSigningRequestInput!) {
+    createWalletSigningRequest(data: $data) {
       ... on MfaSession {
         id
       }
@@ -233,69 +226,6 @@ class WhaleKeyring extends EventEmitter {
     return names;
   }
 
-  // tx is an instance of the ethereumjs-transaction class.
-  signTransaction(address, tx) {
-    let rawTxHex;
-    // transactions built with older versions of ethereumjs-tx have a
-    // getChainId method that newer versions do not. Older versions are mutable
-    // while newer versions default to being immutable. Expected shape and type
-    // of data for v, r and s differ (Buffer (old) vs BN (new))
-    if (typeof tx.getChainId === 'function') {
-      // In this version of ethereumjs-tx we must add the chainId in hex format
-      // to the initial v value. The chainId must be included in the serialized
-      // transaction which is only communicated to ethereumjs-tx in this
-      // value. In newer versions the chainId is communicated via the 'Common'
-      // object.
-      tx.v = ethUtil.bufferToHex(tx.getChainId());
-      tx.r = '0x00';
-      tx.s = '0x00';
-
-      return this._signTransaction(address, tx, (payload) => {
-        tx.v = Buffer.from(payload.v, 'hex');
-        tx.r = Buffer.from(payload.r, 'hex');
-        tx.s = Buffer.from(payload.s, 'hex');
-        return tx;
-      });
-    }
-
-    return this._signTransaction(address, tx, (payload) => {
-      // Because tx will be immutable, first get a plain javascript object that
-      // represents the transaction. Using txData here as it aligns with the
-      // nomenclature of ethereumjs/tx.
-      const txData = tx.toJSON();
-      // The fromTxData utility expects a type to support transactions with a type other than 0
-      txData.type = tx.type;
-      // The fromTxData utility expects v,r and s to be hex prefixed
-      txData.v = ethUtil.addHexPrefix(payload.v);
-      txData.r = ethUtil.addHexPrefix(payload.r);
-      txData.s = ethUtil.addHexPrefix(payload.s);
-      // Adopt the 'common' option from the original transaction and set the
-      // returned object to be frozen if the original is frozen.
-      return TransactionFactory.fromTxData(txData, {
-        common: tx.common,
-        freeze: Object.isFrozen(tx),
-      });
-    });
-  }
-
-  _signTransaction(address, tx, handleSigning) {
-    return new Promise((resolve, reject) => {
-      this.__signTransaction(address, tx).then(function (payload) {
-        const newOrMutatedTx = handleSigning(payload);
-        const valid = newOrMutatedTx.verifySignature();
-        if (valid) {
-          resolve(newOrMutatedTx);
-        } else {
-          reject(
-            new Error(
-              'Kevlar Co. MPC: The transaction signature is not valid',
-            ),
-          );
-        }
-      });
-    });
-  }
-
   formatUnits(input, decimals) {
     input = input.toString();
     return input.length > decimals ?
@@ -303,23 +233,21 @@ class WhaleKeyring extends EventEmitter {
       "0." + "0".repeat(decimals - input.length) + input;
   }
 
-  async __signTransaction(address, tx) {
+  async sendTransaction(address, tx) {
     var json = tx.toJSON();
     var res = await this.apolloClient.mutate({
-      mutation: SIGN_TRANSACTION,
+      mutation: CREATE_WALLET_SIGNING_REQUEST,
       variables: {
         data: {
-          type: tx.type,
+          type: tx.type, // no longer used--all Waymont TXs are now EIP-1559
           data: json.data !== "0x" ? json.data : undefined,
           chainId: tx.type > 0 ? tx.chainId.toString() : tx.common._chainParams.chainId.toString(),
-          sourceWalletAddress: address,
-          destination: {
-            address: json.to
-          },
+          from: address,
+          to: json.to,
           maxFeePerGas: json.maxFeePerGas,
           maxPriorityFeePerGas: json.maxPriorityFeePerGas,
           gasLimit: json.gasLimit,
-          amount: this.formatUnits(tx.value.toString(), 18),
+          value: tx.value.toString(),
           nonce: tx.nonce.toNumber(),
           gasPrice: json.gasPrice,
           accessList: json.accessList
@@ -327,41 +255,47 @@ class WhaleKeyring extends EventEmitter {
       },
     });
 
-    if (res.data.signTransaction.__typename === "MfaSession") {
+    if (res.data.createWalletSigningRequest.__typename === "MfaSession") {
       chrome.windows.create({
-        url: baseAppUrl + '/mfa/' + res.data.signTransaction.id,
+        url: baseAppUrl + '/mfa/' + res.data.createWalletSigningRequest.id,
         focused: true,
         type: 'popup',
         width: 600,
         height: 700,
       });
-      res.data.signTransaction = await new Promise((resolve, reject) => {
+      res.data.createWalletSigningRequest = await new Promise((resolve, reject) => {
         if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {};
         MFA_RESOLVERS[address.toLowerCase()][tx.nonce.toString()] = { resolve, reject };
       });
-    } else if (res.data.signTransaction.r === undefined) {
-      if (res.data.signTransaction.__typename === "ErrorResponse") throw new Error(res.data.signTransaction.message);
-      throw new Error("Unknown Kevlar API error when signing transaction");
+    } else if (res.data.createWalletSigningRequest.transactionHash === undefined) {
+      if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") throw new Error(res.data.createWalletSigningRequest.message);
+      throw new Error("Unknown Waymont API error when signing transaction");
     }
 
-    if (tx.type == 2) res.data.signTransaction.v -= 27;
-    return res.data.signTransaction;
+    return res.data.createWalletSigningRequest.transactionHash;
   }
 
-  mfaResolution(signatureData, errorMessage) {
-    let resolver = MFA_RESOLVERS[signatureData.from.toLowerCase()][signatureData.nonce.toString()];
-    if (signatureData) resolver.resolve(signatureData);
+  mfaResolution(transactionData, errorMessage) {
+    let resolver = MFA_RESOLVERS[transactionData.from.toLowerCase()][transactionData.nonce.toString()];
+    if (transactionData) resolver.resolve(transactionData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
-    else resolver.reject(new Error("Unknown error during Kevlar MFA resolution."));
+    else resolver.reject(new Error("Unknown error during Waymont MFA resolution."));
   }
 
   // For eth_sign, we need to sign arbitrary data:
   async signMessage(address, data, _opts = {}) {
-    throw "eth_sign is not supported by Kevlar Co.'s WhaleKeyring due to potential transaction policies.";
+    // Not supported because of potential transaction policies
+    // Also, the smart contract wallet does not support isValidSignature yet
+    throw "eth_sign is not supported by Waymont Co.'s WhaleKeyring.";
   }
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}) {
+    // Not supported for now (the smart contract wallet does not support isValidSignature yet)
+    throw new Error(
+      "signPersonalMessage is not implemented in Waymont Co.'s WhaleKeyring.",
+    );
+
     var res = await this.apolloClient.mutate({
       mutation: SIGN_MESSAGE,
       variables: {
@@ -373,7 +307,7 @@ class WhaleKeyring extends EventEmitter {
     });
     if (res.data.signMessage.r === undefined) {
       if (res.data.signMessage.__typename === "ErrorResponse") throw new Error(res.data.signMessage.message);
-      throw new Error("Unknown Kevlar API error when signing personal message");
+      throw new Error("Unknown Waymont API error when signing personal message");
     }
     const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
     return rawMsgSig;
@@ -382,7 +316,7 @@ class WhaleKeyring extends EventEmitter {
   // For eth_decryptMessage:
   async decryptMessage(_withAccount, _encryptedData) {
     throw new Error(
-      "decryptMessage is not implemented in Kevlar Co.'s WhaleKeyring.",
+      "decryptMessage is not implemented in Waymont Co.'s WhaleKeyring.",
     );
   }
 
@@ -392,6 +326,11 @@ class WhaleKeyring extends EventEmitter {
     typedData,
     opts = { version: SignTypedDataVersion.V1 },
   ) {
+    // Not supported for now (the smart contract wallet does not support isValidSignature yet)
+    throw new Error(
+      "signTypedData is not implemented in Waymont Co.'s WhaleKeyring.",
+    );
+    
     // Treat invalid versions as "V1"
     const version = Object.keys(SignTypedDataVersion).includes(opts.version)
       ? opts.version
@@ -443,7 +382,7 @@ class WhaleKeyring extends EventEmitter {
     });
     if (res.data.signTypedData.r === undefined) {
       if (res.data.signTypedData.__typename === "ErrorResponse") throw new Error(res.data.signTypedData.message);
-      throw new Error("Unknown Kevlar API error when signing typed data");
+      throw new Error("Unknown Waymont API error when signing typed data");
     }
     return concatSig(ethUtil.toBuffer(res.data.signTypedData.v), res.data.signTypedData.r, res.data.signTypedData.s);
   }
@@ -483,21 +422,21 @@ class WhaleKeyring extends EventEmitter {
   // get public key for nacl
   async getEncryptionPublicKey(_withAccount, _opts = {}) {
     throw new Error(
-      "getEncryptionPublicKey is not implemented in Kevlar Co.'s WhaleKeyring.",
+      "getEncryptionPublicKey is not implemented in Waymont Co.'s WhaleKeyring.",
     );
   }
 
   // returns an address specific to an app
   async getAppKeyAddress(_address, _origin) {
     throw new Error(
-      "getAppKeyAddress is not implemented in Kevlar Co.'s WhaleKeyring.",
+      "getAppKeyAddress is not implemented in Waymont Co.'s WhaleKeyring.",
     );
   }
 
   // exportAccount should return a hex-encoded private key:
   async exportAccount(address, opts = {}) {
     throw new Error(
-      "exportAccount is not implemented in Kevlar Co.'s WhaleKeyring.",
+      "exportAccount is not implemented in Waymont Co.'s WhaleKeyring.",
     );
   }
 
