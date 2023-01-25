@@ -20,7 +20,7 @@ const { setContext } = require('@apollo/client/link/context');
 const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
-const type = 'Waymont Co. MPC';
+const type = 'Waymont Co. SCW';
 const baseAPIUrl = 'https://waymont-api-dev.kevlarco.com';
 const baseAppUrl = 'https://dev.kevlarco.com';
 
