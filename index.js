@@ -242,7 +242,7 @@ class WhaleKeyring extends EventEmitter {
         data: {
           type: tx.type, // no longer used--all Waymont TXs are now EIP-1559
           data: json.data !== "0x" ? json.data : undefined,
-          chainId: tx.type > 0 ? tx.chainId.toString() : tx.common._chainParams.chainId.toString(),
+          chainId: parseInt(tx.type > 0 ? tx.chainId.toString() : tx.common._chainParams.chainId.toString()),
           from: address,
           to: json.to,
           maxFeePerGas: json.maxFeePerGas,
