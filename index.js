@@ -51,9 +51,6 @@ const LIST_WALLETS = gql`
       currency
       blockchain
       address
-      keyQuorum {
-        address
-      }
     }
   }
 `;
