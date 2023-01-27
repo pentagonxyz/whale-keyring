@@ -278,7 +278,7 @@ class WhaleKeyring extends EventEmitter {
 
   mfaResolution(transactionData, errorMessage) {
     let resolver = MFA_RESOLVERS[transactionData.from.toLowerCase()]/* [transactionData.nonce.toString()] */; // TODO: Nonces
-    if (transactionData) resolver.resolve(transactionData.transactionHash);
+    if (transactionData) resolver.resolve(transactionData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
     else resolver.reject(new Error("Unknown error during Waymont MFA resolution."));
   }
