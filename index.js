@@ -249,7 +249,7 @@ class WhaleKeyring extends EventEmitter {
           maxPriorityFeePerGas: json.maxPriorityFeePerGas,
           gasLimit: json.gasLimit,
           value: tx.value.toString(),
-          nonce: tx.nonce.toNumber(),
+          // nonce: tx.nonce.toNumber(), // TODO: Nonces
           gasPrice: json.gasPrice,
           accessList: json.accessList
         },
@@ -265,8 +265,8 @@ class WhaleKeyring extends EventEmitter {
         height: 700,
       });
       res.data.createWalletSigningRequest = await new Promise((resolve, reject) => {
-        if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {};
-        MFA_RESOLVERS[address.toLowerCase()][tx.nonce.toString()] = { resolve, reject };
+        // if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {}; // TODO: Nonces
+        MFA_RESOLVERS[address.toLowerCase()]/* [tx.nonce.toString()] */ = { resolve, reject }; // TODO: Nonces
       });
     } else if (res.data.createWalletSigningRequest.transactionHash === undefined) {
       if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") throw new Error(res.data.createWalletSigningRequest.message);
@@ -277,7 +277,7 @@ class WhaleKeyring extends EventEmitter {
   }
 
   mfaResolution(transactionData, errorMessage) {
-    let resolver = MFA_RESOLVERS[transactionData.from.toLowerCase()][transactionData.nonce.toString()];
+    let resolver = MFA_RESOLVERS[transactionData.from.toLowerCase()]/* [transactionData.nonce.toString()] */; // TODO: Nonces
     if (transactionData) resolver.resolve(transactionData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
     else resolver.reject(new Error("Unknown error during Waymont MFA resolution."));
