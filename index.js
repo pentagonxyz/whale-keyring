@@ -368,7 +368,7 @@ class WhaleKeyring extends EventEmitter {
     if (transactionData.transactionHash) resolver.resolve(transactionData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
     else resolver.reject(new Error("Unknown error during Waymont MFA resolution."));
-    MFA_RESOLVERS[address.toLowerCase()] = undefined; // TODO: Nonces
+    MFA_RESOLVERS[transactionData.from.toLowerCase()] = undefined; // TODO: Nonces
   }
 
   // For eth_sign, we need to sign arbitrary data:
