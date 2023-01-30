@@ -342,16 +342,22 @@ class WhaleKeyring extends EventEmitter {
     });
 
     if (res.data.createWalletSigningRequest.__typename === "MfaSession") {
-      chrome.windows.create({
-        url: baseAppUrl + '/mfa/' + res.data.createWalletSigningRequest.id,
-        focused: true,
-        type: 'popup',
-        width: 600,
-        height: 700,
-      });
       res.data.createWalletSigningRequest = await new Promise((resolve, reject) => {
         // if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {}; // TODO: Nonces
         MFA_RESOLVERS[address.toLowerCase()]/* [tx.nonce.toString()] */ = { resolve, reject }; // TODO: Nonces
+        chrome.windows.create({
+          url: baseAppUrl + '/mfa/' + res.data.createWalletSigningRequest.id,
+          focused: true,
+          type: 'popup',
+          width: 600,
+          height: 700,
+        }, function (mfaWindow) {
+          chrome.windows.onRemoved.addListener(function (removedWindowIndex) {
+            if (removedWindowIndex === mfaWindow.id && MFA_RESOLVERS[address.toLowerCase()] !== undefined) {
+              reject("Waymont MFA window closed");
+            }
+          });
+        });
       });
     } else if (res.data.createWalletSigningRequest.transactionHash === undefined) {
       if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") throw new Error(res.data.createWalletSigningRequest.message);
@@ -366,6 +372,7 @@ class WhaleKeyring extends EventEmitter {
     if (transactionData) resolver.resolve(transactionData);
     else if (errorMessage !== undefined && typeof errorMessage === 'string' && errorMessage.length > 0) resolver.reject(new Error(errorMessage));
     else resolver.reject(new Error("Unknown error during Waymont MFA resolution."));
+    MFA_RESOLVERS[address.toLowerCase()] = undefined; // TODO: Nonces
   }
 
   // For eth_sign, we need to sign arbitrary data:
