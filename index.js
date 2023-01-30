@@ -328,7 +328,7 @@ class WhaleKeyring extends EventEmitter {
           to: json.to,
           maxFeePerGas: json.maxFeePerGas,
           maxPriorityFeePerGas: json.maxPriorityFeePerGas,
-          gasLimit: json.gasLimit,
+          // gasLimit: json.gasLimit, // TODO: Add gas limit back using Wallet.simulateFunctionCall
           value: tx.value.toString(),
           // nonce: tx.nonce.toNumber(), // TODO: Nonces
           gasPrice: json.gasPrice,
