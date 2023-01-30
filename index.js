@@ -118,24 +118,12 @@ const CORE_WALLET_TRANSACTION_FRAGMENT = gql`
     id
     txHash
     chainId
-    source {
-      wallet {
-        keyQuorum {
-          address
-        }
-      }
-      address
-      type
-    }
-    destination {
-      wallet {
-        keyQuorum {
-          address
-        }
-      }
-      address
-      type
-    }
+    relayedForWallet
+    walletTransactionTo
+    assetRecipient
+    to
+    from
+    data
     asset {
       name
       address
@@ -144,6 +132,7 @@ const CORE_WALLET_TRANSACTION_FRAGMENT = gql`
       type
     }
     amount
+    createdAt
     updatedAt
   }
 `;
@@ -154,22 +143,29 @@ const CORE_MFA_SESSION_FRAGMENT = gql`
     isAuthenticatorVerified
     isEmailOneTimeCodeVerified
     actionsToExecute
+    challengeString
     mfaOptions
     status
     wallet {
       id
       name
-      keyQuorum {
-        address
-      }
+      address
     }
     executionTimelockInSeconds
+    executionAllowedAtTimestamp
     createdAtTimestamp
     expiresIn
     transaction {
       ...CoreWalletTransaction
     }
     authUserId
+    authUser {
+      id
+      email
+    }
+    initiatedBy {
+      displayName
+    }
   }
   ${CORE_WALLET_TRANSACTION_FRAGMENT}
 `;
