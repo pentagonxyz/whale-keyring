@@ -113,6 +113,84 @@ const UPDATE_WALLET = gql`
   }
 `;
 
+const CORE_WALLET_TRANSACTION_FRAGMENT = gql`
+  fragment CoreWalletTransaction on Transaction {
+    id
+    txHash
+    chainId
+    source {
+      wallet {
+        keyQuorum {
+          address
+        }
+      }
+      address
+      type
+    }
+    destination {
+      wallet {
+        keyQuorum {
+          address
+        }
+      }
+      address
+      type
+    }
+    asset {
+      name
+      address
+      decimals
+      symbol
+      type
+    }
+    amount
+    updatedAt
+  }
+`;
+
+const CORE_MFA_SESSION_FRAGMENT = gql`
+  fragment CoreMFASession on MfaSession {
+    id
+    isAuthenticatorVerified
+    isEmailOneTimeCodeVerified
+    actionsToExecute
+    mfaOptions
+    status
+    wallet {
+      id
+      name
+      keyQuorum {
+        address
+      }
+    }
+    executionTimelockInSeconds
+    createdAtTimestamp
+    expiresIn
+    transaction {
+      ...CoreWalletTransaction
+    }
+    authUserId
+  }
+  ${CORE_WALLET_TRANSACTION_FRAGMENT}
+`;
+
+const CHECK_AUTH_STATUS = gql`
+  query CheckAuthStatus {
+    checkAuthStatus {
+      ... on MfaSession {
+        ...CoreMFASession
+      }
+      ... on ErrorResponse {
+        errorMessage: message
+      }
+      ... on SuccessResponse {
+        successMessage: message
+      }
+    }
+  }
+  ${CORE_MFA_SESSION_FRAGMENT}
+`;
+
 const MFA_RESOLVERS = {};
 
 class WhaleKeyring extends EventEmitter {
@@ -158,6 +236,13 @@ class WhaleKeyring extends EventEmitter {
       cache: new InMemoryCache(),
       link: authLink.concat(splitLink),
     });
+  }
+
+  async checkMfaStatus() {
+    const res = await this.apolloClient.query({
+      query: CHECK_AUTH_STATUS
+    });
+    return res.data.checkAuthStatus.successMessage !== undefined && res.data.checkAuthStatus.successMessage === "No MFA options found";
   }
 
   // Not really serializing anything but we'll call it this to keep things similar to MM
