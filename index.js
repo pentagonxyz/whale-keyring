@@ -538,14 +538,14 @@ class WhaleKeyring extends EventEmitter {
       chrome.windows.update(this.mfaSetupWindowId, { focused: true });
       throw "MFA setup window already open";
     }
-    await new Promise((resolve, reject) => {
+    await new Promise(((resolve, reject) => {
       chrome.windows.create({
         url: this.baseAppUrl + '/mfa/setup/',
         focused: true,
         type: 'popup',
         width: 600,
         height: 700,
-      }, function (mfaSetupWindow) {
+      }, (function (mfaSetupWindow) {
         this.mfaSetupWindowId = mfaSetupWindow.id;
         chrome.windows.onRemoved.addListener((async function (removedWindowIndex) {
           if (removedWindowIndex === mfaSetupWindow.id) {
@@ -554,8 +554,8 @@ class WhaleKeyring extends EventEmitter {
             resolve();
           }
         }).bind(this));
-      });
-    });
+      }).bind(this));
+    }).bind(this));
   }
 }
 
