@@ -21,16 +21,6 @@ const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
 const type = 'Waymont Co. SCW';
-const baseAPIUrl = 'https://waymont-api-dev.kevlarco.com';
-const baseAppUrl = 'https://dev.kevlarco.com';
-
-const httpLink = createHttpLink({
-  uri: `${baseAPIUrl}/graphql`,
-  credentials: 'include',
-  fetch
-});
-
-const [apiProtocol, apiPathname] = baseAPIUrl.split('://');
 
 const CREATE_WALLET = gql`
   mutation CreateWallet($data: CreateOneWalletInput!) {
@@ -190,10 +180,20 @@ const CHECK_AUTH_STATUS = gql`
 const MFA_RESOLVERS = {};
 
 class WhaleKeyring extends EventEmitter {
-  constructor(accessToken) {
+  constructor(accessToken, baseAppUrl, baseAPIUrl) {
     super();
     this.type = type;
     this.deserialize(accessToken);
+
+    this.baseAppUrl = baseAppUrl;
+
+    const httpLink = createHttpLink({
+      uri: `${baseAPIUrl}/graphql`,
+      credentials: 'include',
+      fetch
+    });
+    
+    const [apiProtocol, apiPathname] = baseAPIUrl.split('://');
 
     const wsProtocol = apiProtocol === 'https' ? 'wss' : 'ws';
 
@@ -342,7 +342,7 @@ class WhaleKeyring extends EventEmitter {
         // if (MFA_RESOLVERS[address.toLowerCase()] === undefined) MFA_RESOLVERS[address.toLowerCase()] = {}; // TODO: Nonces
         MFA_RESOLVERS[address.toLowerCase()]/* [tx.nonce.toString()] */ = { resolve, reject }; // TODO: Nonces
         chrome.windows.create({
-          url: baseAppUrl + '/mfa/' + res.data.createWalletSigningRequest.id,
+          url: this.baseAppUrl + '/mfa/' + res.data.createWalletSigningRequest.id,
           focused: true,
           type: 'popup',
           width: 600,
@@ -530,7 +530,7 @@ class WhaleKeyring extends EventEmitter {
   }
 
   logout() {
-    return fetch(baseAppUrl + "/logout");
+    return fetch(this.baseAppUrl + "/logout");
   }
 }
 
