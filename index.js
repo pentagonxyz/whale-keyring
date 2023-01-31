@@ -274,7 +274,6 @@ class WhaleKeyring extends EventEmitter {
       newWallets.push(res.data.createWallet.address);
     }
     this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(newWallets) : newWallets;
-    if (n > 0) this.hasAccounts = true;
     return newWallets;
   }
 
@@ -297,9 +296,7 @@ class WhaleKeyring extends EventEmitter {
       query: LIST_WALLETS,
     });
     var wallets = res.data.wallets.map(({ address }) => address);
-    let accounts = this.newAccountsCache !== undefined ? wallets.concat(this.newAccountsCache.filter((item) => wallets.indexOf(item) < 0)) : wallets;
-    this.hasAccounts = accounts.length > 0;
-    return accounts;
+    return this.newAccountsCache !== undefined ? wallets.concat(this.newAccountsCache.filter((item) => wallets.indexOf(item) < 0)) : wallets;
   }
 
   async getAccountNames() {
