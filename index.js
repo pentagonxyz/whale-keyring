@@ -535,6 +535,30 @@ class WhaleKeyring extends EventEmitter {
   logout() {
     return fetch(this.baseAppUrl + "/logout");
   }
+
+  async waitForMfaSetup(force) {
+    if (this.mfaSetupWindowId !== undefined) {
+      if (force) chrome.windows.update(this.mfaSetupWindowId, { focused: true });
+      return;
+    }
+    await new Promise((resolve, reject) => {
+      chrome.windows.create({
+        url: this.baseAppUrl + '/mfa/setup/',
+        focused: true,
+        type: 'popup',
+        width: 600,
+        height: 700,
+      }, function (mfaSetupWindow) {
+        this.mfaSetupWindowId = mfaSetupWindow.id;
+        chrome.windows.onRemoved.addListener(function (removedWindowIndex) {
+          if (removedWindowIndex === mfaSetupWindow.id) {
+            this.mfaSetupWindowId = undefined;
+            resolve();
+          }
+        });
+      });
+    });
+  }
 }
 
 WhaleKeyring.type = type;
