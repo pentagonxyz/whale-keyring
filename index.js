@@ -550,7 +550,7 @@ class WhaleKeyring extends EventEmitter {
         chrome.windows.onRemoved.addListener(async function (removedWindowIndex) {
           if (removedWindowIndex === mfaSetupWindow.id) {
             this.mfaSetupWindowId = undefined;
-            if (!(await this.checkAuthStatus())) reject("MFA setup window closed")
+            if (!(await this.checkMfaStatus())) reject("MFA setup window closed")
             resolve();
           }
         });
