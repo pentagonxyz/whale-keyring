@@ -238,7 +238,7 @@ class WhaleKeyring extends EventEmitter {
     const res = await this.apolloClient.query({
       query: CHECK_AUTH_STATUS
     });
-    return res.data.checkAuthStatus.successMessage !== undefined && res.data.checkAuthStatus.successMessage === "No MFA options found";
+    return !(res.data.checkAuthStatus.successMessage !== undefined && res.data.checkAuthStatus.successMessage === "No MFA options found");
   }
 
   // Not really serializing anything but we'll call it this to keep things similar to MM
