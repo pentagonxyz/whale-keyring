@@ -536,6 +536,7 @@ class WhaleKeyring extends EventEmitter {
 
   async waitForMfaSetup() {
     if (!this.forceNextMfaSetup) throw "No interaction from user, not logging in (this is not an error, just a warning)";
+    this.forceNextMfaSetup = false;
     if (MFA_SETUP_WINDOW_DATA.id !== undefined) {
       chrome.windows.update(MFA_SETUP_WINDOW_DATA.id, { focused: true });
       throw "MFA setup window already open";
