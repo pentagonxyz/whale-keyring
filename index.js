@@ -178,6 +178,7 @@ const CHECK_AUTH_STATUS = gql`
 `;
 
 const MFA_RESOLVERS = {};
+const MFA_SETUP_WINDOW_DATA = {};
 
 class WhaleKeyring extends EventEmitter {
   constructor(accessToken, baseAppUrl, baseAPIUrl) {
@@ -534,10 +535,11 @@ class WhaleKeyring extends EventEmitter {
   }
 
   async waitForMfaSetup() {
-    if (this.mfaSetupWindowId !== undefined) {
-      chrome.windows.update(this.mfaSetupWindowId, { focused: true });
+    if (MFA_SETUP_WINDOW_DATA.id !== undefined) {
+      chrome.windows.update(MFA_SETUP_WINDOW_DATA.id, { focused: true });
       throw "MFA setup window already open";
     }
+    const checkMfaStatus = this.checkMfaStatus;
     await new Promise((resolve, reject) => {
       chrome.windows.create({
         url: this.baseAppUrl + '/mfa/setup/',
@@ -546,11 +548,11 @@ class WhaleKeyring extends EventEmitter {
         width: 600,
         height: 700,
       }, function (mfaSetupWindow) {
-        this.mfaSetupWindowId = mfaSetupWindow.id;
+        MFA_SETUP_WINDOW_DATA.id = mfaSetupWindow.id;
         chrome.windows.onRemoved.addListener(async function (removedWindowIndex) {
           if (removedWindowIndex === mfaSetupWindow.id) {
-            this.mfaSetupWindowId = undefined;
-            if (!(await this.checkMfaStatus())) reject("MFA setup window closed")
+            MFA_SETUP_WINDOW_DATA.id = undefined;
+            if (!(await checkMfaStatus())) reject("MFA setup window closed")
             resolve();
           }
         });
