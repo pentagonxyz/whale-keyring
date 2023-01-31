@@ -533,13 +533,11 @@ class WhaleKeyring extends EventEmitter {
     return fetch(this.baseAppUrl + "/logout");
   }
 
-  async waitForMfaSetup(force) {
+  async waitForMfaSetup() {
     if (this.mfaSetupWindowId !== undefined) {
-      if (force || this.forceNextMfaSetup) chrome.windows.update(this.mfaSetupWindowId, { focused: true });
-      this.forceNextMfaSetup = false;
-      return;
+      chrome.windows.update(this.mfaSetupWindowId, { focused: true });
+      throw "MFA setup window already open";
     }
-    this.forceNextMfaSetup = false;
     await new Promise((resolve, reject) => {
       chrome.windows.create({
         url: this.baseAppUrl + '/mfa/setup/',
