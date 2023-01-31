@@ -559,6 +559,10 @@ class WhaleKeyring extends EventEmitter {
       });
     });
   }
+
+  bringMfaWindowToTopIfNoAccounts() {
+    if (!this.hasAccounts) this.waitForMfaSetup(true);
+  }
 }
 
 WhaleKeyring.type = type;
