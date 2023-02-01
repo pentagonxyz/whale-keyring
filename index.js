@@ -22,13 +22,18 @@ const fetch = require('cross-fetch');
 
 const type = 'Waymont Co. SCW';
 
-const CREATE_WALLET = gql`
-  mutation CreateWallet($data: CreateOneWalletInput!) {
-    createWallet(data: $data) {
-      id
-      name
-      address
-      currency
+const CREATE_CROSS_CHAINS_WALLET = gql`
+  mutation CreateCrossChainsWallet($data: CreateCrossChainsWalletInput!) {
+    createCrossChainsWallet(data: $data) {
+      ... on Wallet {
+        id
+        name
+        address
+        currency
+      }
+      ... on ErrorResponse {
+        message
+      }
     }
   }
 `;
@@ -257,22 +262,18 @@ class WhaleKeyring extends EventEmitter {
     const newWallets = [];
     for (let i = 0; i < n; i++) {
       const res = await this.apolloClient.mutate({
-        mutation: CREATE_WALLET,
+        mutation: CREATE_CROSS_CHAINS_WALLET,
         variables: {
           data: {
-            sessionId: uuidv4(),
-            name: names !== undefined ? names[i] : `Account ${
+            walletName: names !== undefined ? names[i] : `Account ${
               prevAccountCount + 1 + i
             } from ${new Date().toDateString()}`,
-            parties: 3,
-            threshold: 2,
-            blockchain: 'ETHEREUM',
-            currency: 'USD',
           },
         },
       });
 
-      newWallets.push(res.data.createWallet.address);
+      if (res.data?.createCrossChainsWallet.__typename === "ErrorResponse") throw "Error creating wallet: " + res.data.createCrossChainsWallet.message;
+      newWallets.push(res.data.createCrossChainsWallet.address);
     }
     this.newAccountsCache = this.newAccountsCache !== undefined ? this.newAccountsCache.concat(newWallets) : newWallets;
     return newWallets;
