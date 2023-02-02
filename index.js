@@ -532,7 +532,13 @@ class WhaleKeyring extends EventEmitter {
   }
 
   logout() {
-    return fetch(this.baseAppUrl + "/logout");
+    return chrome.windows.create({
+      url: this.baseAppUrl + '/logout/',
+      focused: false,
+      type: 'popup',
+      width: 200,
+      height: 100,
+    });
   }
 
   async waitForMfaSetup() {
