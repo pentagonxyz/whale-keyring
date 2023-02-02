@@ -536,8 +536,8 @@ class WhaleKeyring extends EventEmitter {
       url: this.baseAppUrl + '/logout/',
       focused: false,
       type: 'popup',
-      width: 200,
-      height: 100,
+      width: 400,
+      height: 300,
     });
   }
 
