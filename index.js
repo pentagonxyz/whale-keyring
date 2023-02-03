@@ -240,9 +240,10 @@ class WhaleKeyring extends EventEmitter {
     });
   }
 
-  async checkMfaStatus() {
+  async checkMfaStatus(noCache) {
     const res = await this.apolloClient.query({
-      query: CHECK_AUTH_STATUS
+      query: CHECK_AUTH_STATUS,
+      fetchPolicy: noCache ? "no-cache" : undefined
     });
     return !(res.data.checkAuthStatus.successMessage !== undefined && res.data.checkAuthStatus.successMessage === "No MFA options found");
   }
@@ -561,7 +562,7 @@ class WhaleKeyring extends EventEmitter {
         chrome.windows.onRemoved.addListener(async function (removedWindowIndex) {
           if (MFA_SETUP_WINDOW_DATA.id !== undefined && removedWindowIndex === mfaSetupWindow.id) {
             MFA_SETUP_WINDOW_DATA.id = undefined;
-            if (!(await checkMfaStatus())) reject("MFA setup window closed")
+            if (!(await checkMfaStatus(true))) reject("MFA setup window closed")
             resolve();
           }
         });
@@ -569,7 +570,7 @@ class WhaleKeyring extends EventEmitter {
         chrome.windows.onFocusChanged.addListener(async function (focusedWindowIndex) {
           let _lastFocusedWindowId = lastFocusedWindowId;
           lastFocusedWindowId = focusedWindowIndex;
-          if (_lastFocusedWindowId === mfaSetupWindow.id && focusedWindowIndex !== mfaSetupWindow.id && await checkMfaStatus()) {
+          if (_lastFocusedWindowId === mfaSetupWindow.id && focusedWindowIndex !== mfaSetupWindow.id && await checkMfaStatus(true)) {
             MFA_SETUP_WINDOW_DATA.id = undefined;
             chrome.windows.remove(mfaSetupWindow.id);
             resolve();
