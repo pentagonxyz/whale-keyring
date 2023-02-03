@@ -548,7 +548,7 @@ class WhaleKeyring extends EventEmitter {
       chrome.windows.update(MFA_SETUP_WINDOW_DATA.id, { focused: true });
       throw "MFA setup window already open";
     }
-    const checkMfaStatus = this.checkMfaStatus;
+    const checkMfaStatus = this.checkMfaStatus.bind(this);
     await new Promise((resolve, reject) => {
       chrome.windows.create({
         url: this.baseAppUrl + '/mfa/setup/',
