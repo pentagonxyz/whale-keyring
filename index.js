@@ -101,8 +101,8 @@ const SIGN_TYPED_DATA = gql`
 const UPDATE_WALLET = gql`
   mutation UpdateWallet($where: WalletWhereUniqueInput!, $data: UpdateOneWalletInput!) {
     updateWallet(where: $where, data: $data) {
-      ... on ErrorResponse {
-        message
+      ... on Wallet {
+        name
       }
     }
   }
