@@ -6,6 +6,7 @@ const {
 } = require('@metamask/eth-sig-util');
 const { TransactionFactory } = require('@ethereumjs/tx');
 const { keccak256 } = require('ethereum-cryptography/keccak');
+const { bytesToHex } = require('ethereum-cryptography/utils');
 
 const {
   gql,
@@ -384,7 +385,7 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}) {
-    let hashHex = keccak256(msgHex);
+    let hashHex = bytesToHex(keccak256(Buffer.from(msgHex, 'hex'));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
     let params = [
       {
