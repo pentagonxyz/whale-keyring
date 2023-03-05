@@ -385,7 +385,7 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}) {
-    let hashHex = bytesToHex(keccak256(Buffer.from(msgHex, 'hex'));
+    let hashHex = bytesToHex(keccak256(Buffer.from(msgHex, 'hex')));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
     let params = [
       {
