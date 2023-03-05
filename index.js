@@ -384,22 +384,19 @@ class WhaleKeyring extends EventEmitter {
   }
 
   // For personal_sign, we need to prefix the message:
-  async signPersonalMessage(address, msgHex, _opts = {}) {
+  async signPersonalMessage(address, msgHex, _opts = {}, processTransaction, origin) {
     let hashHex = bytesToHex(keccak256(Buffer.from(msgHex, 'hex')));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
-    let params = [
-      {
-        from: address,
-        to: address,
-        data: "0x71fa763d" + hashHex + "0000000000000000000000000000000000000000000000000000000000000001",
-      },
-    ];
-    
-    await window.ethereum
-      .request({
-        method: 'eth_sendTransaction',
-        params
-      });
+    let tx = {
+      from: address.toLowerCase(),
+      to: address,
+      data: "0x71fa763d" + hashHex + "0000000000000000000000000000000000000000000000000000000000000001",
+    };
+    await processTransaction(tx, {
+      method: 'eth_sendTransaction',
+      params: [tx],
+      origin
+    });
     return "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222221c"; // Mimic real signature (65 bytes; `s` should be <= `0x7f...`)
   }
 
