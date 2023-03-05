@@ -5,6 +5,7 @@ const {
   SignTypedDataVersion
 } = require('@metamask/eth-sig-util');
 const { TransactionFactory } = require('@ethereumjs/tx');
+const { keccak256 } = require('ethereum-cryptography/keccak');
 
 const {
   gql,
@@ -383,26 +384,22 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}) {
-    // Not supported for now (the smart contract wallet does not support isValidSignature yet)
-    throw new Error(
-      "signPersonalMessage is not implemented in Waymont Co.'s WhaleKeyring.",
-    );
-
-    var res = await this.apolloClient.mutate({
-      mutation: SIGN_MESSAGE,
-      variables: {
-        data: {
-          walletAddress: address,
-          content: msgHex
-        },
+    let hashHex = keccak256(msgHex);
+    if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
+    let params = [
+      {
+        from: address,
+        to: address,
+        data: "0x71fa763d" + hashHex + "0000000000000000000000000000000000000000000000000000000000000001",
       },
-    });
-    if (res.data.signMessage.r === undefined) {
-      if (res.data.signMessage.__typename === "ErrorResponse") throw new Error(res.data.signMessage.message);
-      throw new Error("Unknown Waymont API error when signing personal message");
-    }
-    const rawMsgSig = concatSig(res.data.signMessage.v, res.data.signMessage.r, res.data.signMessage.s);
-    return rawMsgSig;
+    ];
+    
+    await window.ethereum
+      .request({
+        method: 'eth_sendTransaction',
+        params
+      });
+    return "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222221c"; // Mimic real signature (65 bytes; `s` should be <= `0x7f...`)
   }
 
   // For eth_decryptMessage:
