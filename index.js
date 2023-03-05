@@ -385,7 +385,12 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}, processTransaction, origin) {
-    let hashHex = bytesToHex(keccak256(Buffer.from(msgHex, 'hex')));
+    const message = Buffer.from(msgHex, 'hex');
+    const prefix = Buffer.from(
+      `\u0019Ethereum Signed Message:\n${message.length.toString()}`,
+      'utf-8'
+    )
+    let hashHex = bytesToHex(keccak256(Buffer.concat([prefix, message])));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
     let tx = {
       from: address.toLowerCase(),
