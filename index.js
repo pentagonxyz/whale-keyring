@@ -385,6 +385,13 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}, processTransaction, origin) {
+    // Check origin
+    let hostname = (new URL(origin)).hostname;
+    let parts = hostname.split(".");
+    let rootDomain = parts[parts.length - 2] + "." + parts[parts.length - 1];
+    if (rootDomain !== "opensea.io" && !confirm("This dApp is trying to sign a message, but Waymont is unsure if the dApp supports Waymont wallets (which use EIP-1271 smart contract signatures). Do you want to try anyway (might be a waste of gas)?")) throw "Attemped EIP-1271 message signing canceled by user.";
+
+    // Prefix and hash message
     const message = Buffer.from(msgHex, 'hex');
     const prefix = Buffer.from(
       `\u0019Ethereum Signed Message:\n${message.length.toString()}`,
@@ -392,6 +399,8 @@ class WhaleKeyring extends EventEmitter {
     )
     let hashHex = bytesToHex(keccak256(Buffer.concat([prefix, message])));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
+
+    // Send setValidSignedMessageHash TX
     let tx = {
       from: address.toLowerCase(),
       to: address,
@@ -402,7 +411,9 @@ class WhaleKeyring extends EventEmitter {
       params: [tx],
       origin
     });
-    return "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222221c"; // Mimic real signature (65 bytes; `s` should be <= `0x7f...`)
+
+    // Mimic real signature (65 bytes; `s` should be <= `0x7f...`)
+    return "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222221c";
   }
 
   // For eth_decryptMessage:
