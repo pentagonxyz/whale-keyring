@@ -188,12 +188,13 @@ const MFA_RESOLVERS = {};
 const MFA_SETUP_WINDOW_DATA = {};
 
 class WhaleKeyring extends EventEmitter {
-  constructor(accessToken, baseAppUrl, baseAPIUrl) {
+  constructor(accessToken, baseAppUrl, baseAPIUrl, setLocked) {
     super();
     this.type = type;
     this.deserialize(accessToken);
 
     this.baseAppUrl = baseAppUrl;
+    this.setLocked = setLocked;
 
     const httpLink = createHttpLink({
       uri: `${baseAPIUrl}/graphql`,
@@ -361,7 +362,13 @@ class WhaleKeyring extends EventEmitter {
         });
       });
     } else if (res.data.createWalletSigningRequest.transactionHash === undefined) {
-      if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") throw new Error(res.data.createWalletSigningRequest.message);
+      if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") {
+        if (res.data.createWalletSigningRequest.message === "Unauthorized") {
+          this.setLocked();
+          throw new Error("Logged out...");
+        }
+        throw new Error(res.data.createWalletSigningRequest.message);
+      }
       throw new Error("Unknown Waymont API error when signing transaction");
     }
 
