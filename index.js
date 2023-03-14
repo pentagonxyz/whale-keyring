@@ -364,7 +364,7 @@ class WhaleKeyring extends EventEmitter {
     } else if (res.data.createWalletSigningRequest.transactionHash === undefined) {
       if (res.data.createWalletSigningRequest.__typename === "ErrorResponse") {
         if (res.data.createWalletSigningRequest.message === "Unauthorized") {
-          this.setLocked();
+          this.setLocked(true);
           throw new Error("Logged out...");
         }
         throw new Error(res.data.createWalletSigningRequest.message);
