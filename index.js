@@ -1,3 +1,4 @@
+const { randomBytes } = require('crypto');
 const { EventEmitter } = require('events');
 const ethUtil = require('ethereumjs-util');
 const {
