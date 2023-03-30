@@ -406,12 +406,25 @@ class WhaleKeyring extends EventEmitter {
     )
     let hashHex = bytesToHex(keccak256(Buffer.concat([prefix, message])));
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
+    
+    // Generate random fake signature
+    let rHex = randomBytes(32);
+    let s = randomBytes(32);
+    let count = 0;
+    while (Buffer.compare(s, Buffer.from("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0", "hex")) === 1) {
+      s = randomBytes(32);
+      count++;
+      if (count >= 1000) throw "Failed to generate random number";
+    }
+    let signature = Buffer.concat([r, s, Buffer.from("1c", "hex")]);
+    let signatureHashHex = bytesToHex(keccak256(signature));
+    if (signatureHashHex.substring(0, 2) === "0x") signatureHashHex = signatureHashHex.substring(2); // REMOVE 0x
 
     // Send setValidSignedMessageHash TX
     let tx = {
       from: address.toLowerCase(),
       to: address,
-      data: "0x71fa763d" + hashHex + "0000000000000000000000000000000000000000000000000000000000000001",
+      data: "0x5e9e88cd" + hashHex + signatureHashHex + "0000000000000000000000000000000000000000000000000000000000000001",
     };
     await processTransaction(tx, {
       method: 'eth_sendTransaction',
@@ -420,7 +433,9 @@ class WhaleKeyring extends EventEmitter {
     });
 
     // Mimic real signature (65 bytes; `s` should be <= `0x7f...`)
-    return "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222221c";
+    let signatureHex = signature.toString("hex");
+    if (signatureHex.substring(0, 2) !== "0x") signatureHex = "0x" + signatureHex; // ADD 0x
+    return signatureHex;
   }
 
   // For eth_decryptMessage:
