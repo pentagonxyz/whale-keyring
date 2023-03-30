@@ -409,7 +409,7 @@ class WhaleKeyring extends EventEmitter {
     if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
     
     // Generate random fake/dummy signature (mimic a real signature--65 bytes; `s` should be <= `0x7f...`)
-    let rHex = randomBytes(32);
+    let r = randomBytes(32);
     let s = randomBytes(32);
     let count = 0;
     while (Buffer.compare(s, Buffer.from("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0", "hex")) === 1) {
