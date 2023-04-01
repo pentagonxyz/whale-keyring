@@ -435,11 +435,13 @@ class WhaleKeyring extends EventEmitter {
     });
 
     // Wait 15 seconds for the TX confirmation to propagate
-    var win = window.open("", "_blank", "toolbar=no,scrollbars=no,resizable=no,width=400,height=150,top=" + parseInt(screen.height / 2 - 75) + ",left=" + parseInt(screen.width / 2 - 200));
-    win.document.body.innerHTML = "<h1 style=\"font-family: monospace;\">Please wait 15 seconds while your transaction propagates... (This window will close automatically.)</h1>";
-    var script = document.createElement('script');
-    script.innerHTML = 'setTimeout(window.close, 15000);';
-    win.document.head.appendChild(script);
+    chrome.windows.create({
+      url: 'data:text/html,<head><title>Please wait 15 seconds...</title></head><body style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px 25px; font-family: monospace;"><h1 style="margin: 0;">Please wait 15 seconds while your transaction propagates... (This window will close automatically.)</h1><script>setTimeout(window.close, 15000);</script>',
+      focused: true,
+      type: 'popup',
+      width: 600,
+      height: 200,
+    });
     await new Promise((resolve) => setTimeout(resolve, 15000));
 
     // Return dummy signature (65 bytes; `s` should be <= `0x7f...`)
