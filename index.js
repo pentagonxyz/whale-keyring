@@ -400,6 +400,7 @@ class WhaleKeyring extends EventEmitter {
     if (rootDomain !== "opensea.io" && !confirm("This dApp is trying to sign a message, but Waymont is unsure if the dApp supports Waymont wallets (which use EIP-1271 smart contract signatures). Do you want to try anyway (might be a waste of gas)?")) throw "Attemped EIP-1271 message signing canceled by user.";
 
     // Prefix and hash message
+    if (msgHex.length >= 2 && msgHex.substring(0, 2) === "0x") msgHex = msgHex.substring(2);
     const message = Buffer.from(msgHex, 'hex');
     const prefix = Buffer.from(
       `\u0019Ethereum Signed Message:\n${message.length.toString()}`,
