@@ -434,6 +434,14 @@ class WhaleKeyring extends EventEmitter {
       origin
     });
 
+    // Wait 15 seconds for the TX confirmation to propagate
+    var win = window.open("", "_blank", "toolbar=no,scrollbars=no,resizable=no,width=400,height=150,top=" + parseInt(screen.height / 2 - 75) + ",left=" + parseInt(screen.width / 2 - 200));
+    win.document.body.innerHTML = "<h1 style=\"font-family: monospace;\">Please wait 15 seconds while your transaction propagates... (This window will close automatically.)</h1>";
+    var script = document.createElement('script');
+    script.innerHTML = 'setTimeout(window.close, 15000);';
+    win.document.head.appendChild(script);
+    await new Promise((resolve) => setTimeout(resolve, 15000));
+
     // Return dummy signature (65 bytes; `s` should be <= `0x7f...`)
     let signatureHex = signature.toString("hex");
     if (signatureHex.substring(0, 2) !== "0x") signatureHex = "0x" + signatureHex; // ADD 0x
