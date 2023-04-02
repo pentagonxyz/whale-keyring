@@ -189,13 +189,14 @@ const MFA_RESOLVERS = {};
 const MFA_SETUP_WINDOW_DATA = {};
 
 class WhaleKeyring extends EventEmitter {
-  constructor(accessToken, baseAppUrl, baseAPIUrl, setLocked) {
+  constructor(accessToken, baseAppUrl, baseAPIUrl, setLocked, processTransaction) {
     super();
     this.type = type;
     this.deserialize(accessToken);
 
     this.baseAppUrl = baseAppUrl;
     this.setLocked = setLocked;
+    this.processTransaction = processTransaction;
 
     const httpLink = createHttpLink({
       uri: `${baseAPIUrl}/graphql`,
@@ -392,7 +393,7 @@ class WhaleKeyring extends EventEmitter {
   }
 
   // For personal_sign, we need to prefix the message:
-  async signPersonalMessage(address, msgHex, _opts = {}, processTransaction, origin) {
+  async signPersonalMessage(address, msgHex, _opts = {}, origin) {
     // Check origin
     let hostname = (new URL(origin)).hostname;
     let parts = hostname.split(".");
@@ -400,14 +401,14 @@ class WhaleKeyring extends EventEmitter {
     if (rootDomain !== "opensea.io" && !confirm("This dApp is trying to sign a message, but Waymont is unsure if the dApp supports Waymont wallets (which use EIP-1271 smart contract signatures). Do you want to try anyway (might be a waste of gas)?")) throw "Attemped EIP-1271 message signing canceled by user.";
 
     // Prefix and hash message
-    if (msgHex.length >= 2 && msgHex.substring(0, 2) === "0x") msgHex = msgHex.substring(2);
+    if (msgHex.length >= 2 && msgHex.substring(0, 2) === "0x") msgHex = msgHex.substring(2); // Remove "0x" prefix from hex string before decoding into Buffer
     const message = Buffer.from(msgHex, 'hex');
     const prefix = Buffer.from(
       `\u0019Ethereum Signed Message:\n${message.length.toString()}`,
       'utf-8'
     )
     let hashHex = bytesToHex(keccak256(Buffer.concat([prefix, message])));
-    if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2);
+    if (hashHex.substring(0, 2) === "0x") hashHex = hashHex.substring(2); // Remove "0x" prefix from hex string before dropping it into the ABI-encoded function call data below
     
     // Generate random fake/dummy signature (mimic a real signature--65 bytes; `s` should be <= `0x7f...`)
     let r = randomBytes(32);
@@ -420,7 +421,7 @@ class WhaleKeyring extends EventEmitter {
     }
     let signature = Buffer.concat([r, s, Buffer.from("1c", "hex")]);
     let signatureHashHex = bytesToHex(keccak256(signature));
-    if (signatureHashHex.substring(0, 2) === "0x") signatureHashHex = signatureHashHex.substring(2); // REMOVE 0x
+    if (signatureHashHex.substring(0, 2) === "0x") signatureHashHex = signatureHashHex.substring(2); // Remove "0x" prefix from hex string before dropping it into the ABI-encoded function call data below
 
     // Send setValidSignedMessageHash TX
     let tx = {
@@ -428,7 +429,7 @@ class WhaleKeyring extends EventEmitter {
       to: address,
       data: "0x5e9e88cd" + hashHex + signatureHashHex + "0000000000000000000000000000000000000000000000000000000000000001",
     };
-    await processTransaction(tx, {
+    await this.processTransaction(tx, {
       method: 'eth_sendTransaction',
       params: [tx],
       origin
@@ -446,7 +447,7 @@ class WhaleKeyring extends EventEmitter {
 
     // Return dummy signature (65 bytes; `s` should be <= `0x7f...`)
     let signatureHex = signature.toString("hex");
-    if (signatureHex.substring(0, 2) !== "0x") signatureHex = "0x" + signatureHex; // ADD 0x
+    if (signatureHex.substring(0, 2) !== "0x") signatureHex = "0x" + signatureHex; // Add "0x" prefix to hex-encoded string for return
     return signatureHex;
   }
 
@@ -462,12 +463,8 @@ class WhaleKeyring extends EventEmitter {
     withAccount,
     typedData,
     opts = { version: SignTypedDataVersion.V1 },
+    origin
   ) {
-    // Not supported for now (the smart contract wallet does not support isValidSignature yet)
-    throw new Error(
-      "signTypedData is not implemented in Waymont Co.'s WhaleKeyring.",
-    );
-    
     // Treat invalid versions as "V1"
     const version = Object.keys(SignTypedDataVersion).includes(opts.version)
       ? opts.version
@@ -477,6 +474,7 @@ class WhaleKeyring extends EventEmitter {
       address: withAccount,
       data: typedData,
       version,
+      origin
     });
   }
 
@@ -499,7 +497,7 @@ class WhaleKeyring extends EventEmitter {
    * @param options.version - The signing version to use.
    * @returns The '0x'-prefixed hex encoded signature.
    */
-  async _signTypedData({ address, data, version }) {
+  async _signTypedData({ address, data, version, origin }) {
     this.validateVersion(version);
     if (this.isNullish(data)) {
       throw new Error('Missing data parameter');
@@ -507,21 +505,11 @@ class WhaleKeyring extends EventEmitter {
       throw new Error('Missing private key parameter');
     }
 
-    var res = await this.apolloClient.mutate({
-      mutation: SIGN_TYPED_DATA,
-      variables: {
-        data: {
-          walletAddress: address,
-          content: data,
-          version
-        },
-      },
-    });
-    if (res.data.signTypedData.r === undefined) {
-      if (res.data.signTypedData.__typename === "ErrorResponse") throw new Error(res.data.signTypedData.message);
-      throw new Error("Unknown Waymont API error when signing typed data");
-    }
-    return concatSig(ethUtil.toBuffer(res.data.signTypedData.v), res.data.signTypedData.r, res.data.signTypedData.s);
+    const messageHash =
+      version === SignTypedDataVersion.V1
+        ? Buffer.from(typedSignatureHash(data), 'hex')
+        : TypedDataUtils.eip712Hash(data, version);
+    return await this.signPersonalMessage(address, "0x" + messageHash.toString('hex'), {}, origin);
   }
 
   /**
