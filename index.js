@@ -1,11 +1,10 @@
 const { randomBytes } = require('crypto');
 const { EventEmitter } = require('events');
-const ethUtil = require('ethereumjs-util');
 const {
-  concatSig,
-  SignTypedDataVersion
+  SignTypedDataVersion,
+  typedSignatureHash,
+  TypedDataUtils,
 } = require('@metamask/eth-sig-util');
-const { TransactionFactory } = require('@ethereumjs/tx');
 const { keccak256 } = require('ethereum-cryptography/keccak');
 const { bytesToHex } = require('ethereum-cryptography/utils');
 
@@ -20,7 +19,6 @@ const { GraphQLWsLink } = require('@apollo/client/link/subscriptions');
 const { getMainDefinition } = require('@apollo/client/utilities');
 const { createClient } = require('graphql-ws');
 const { setContext } = require('@apollo/client/link/context');
-const uuidv4 = require('uuid').v4;
 const fetch = require('cross-fetch');
 
 const type = 'Waymont Co. SCW';
@@ -58,40 +56,6 @@ const CREATE_WALLET_SIGNING_REQUEST = gql`
     createWalletSigningRequest(data: $data) {
       ... on MfaSession {
         id
-      }
-
-      ... on ErrorResponse {
-        message
-      }
-    }
-  }
-`;
-
-const SIGN_MESSAGE = gql`
-  mutation SignMessage($data: SignMessageInput!) {
-    signMessage(data: $data) {
-      ... on Signature {
-        fullSig
-        r
-        s
-        v
-      }
-
-      ... on ErrorResponse {
-        message
-      }
-    }
-  }
-`;
-
-const SIGN_TYPED_DATA = gql`
-  mutation SignTypedData($data: SignTypedDataInput!) {
-    signTypedData(data: $data) {
-      ... on Signature {
-        fullSig
-        r
-        s
-        v
       }
 
       ... on ErrorResponse {
