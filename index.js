@@ -401,15 +401,15 @@ class WhaleKeyring extends EventEmitter {
       origin
     });
 
-    // Wait 15 seconds for the TX confirmation to propagate
+    // Wait 30 seconds for the TX confirmation to propagate
     chrome.windows.create({
-      url: 'data:text/html,<head><title>Please wait 15 seconds...</title></head><body style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px 25px; font-family: monospace;"><h1 style="margin: 0;">Please wait 15 seconds while your transaction propagates... (This window will close automatically.)</h1><script>setTimeout(window.close, 15000);</script>',
+      url: 'data:text/html,<head><title>Please wait 30 seconds...</title></head><body style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px 25px; font-family: monospace;"><h1 style="margin: 0;">Please wait 30 seconds while your transaction propagates... (This window will close automatically.)</h1><script>setTimeout(window.close, 30000);</script>',
       focused: true,
       type: 'popup',
       width: 600,
       height: 200,
     });
-    await new Promise((resolve) => setTimeout(resolve, 15000));
+    await new Promise((resolve) => setTimeout(resolve, 30000));
 
     // Return dummy signature (65 bytes; `s` should be <= `0x7f...`)
     let signatureHex = signature.toString("hex");
