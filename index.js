@@ -403,7 +403,7 @@ class WhaleKeyring extends EventEmitter {
 
     // Wait 30 seconds for the TX confirmation to propagate
     chrome.windows.create({
-      url: 'data:text/html,<head><title>Please wait 30 seconds...</title></head><body style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px 25px; font-family: monospace;"><h1 style="margin: 0;">Please wait 30 seconds while your transaction propagates... (This window will close automatically.)</h1><script>setTimeout(window.close, 30000);</script>',
+      url: 'data:text/html,<head><title>Please wait 30 seconds...</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet"></head><body style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px 25px; font-family: \'Open Sans\', sans-serif;"><h1 style="margin: 0;">Please wait 30 seconds while your transaction propagates... (This window will close automatically.)</h1><script>setTimeout(window.close, 30000);</script>',
       focused: true,
       type: 'popup',
       width: 600,
