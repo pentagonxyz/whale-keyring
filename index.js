@@ -152,6 +152,8 @@ const CHECK_AUTH_STATUS = gql`
 const MFA_RESOLVERS = {};
 const MFA_SETUP_WINDOW_DATA = {};
 
+const KNOWN_DAPPS_WITH_ERC1271_SUPPORT = ["opensea.io", "testnet.opensea.io", "app.uniswap.org"];
+
 class WhaleKeyring extends EventEmitter {
   constructor(accessToken, baseAppUrl, baseAPIUrl, setLocked, processTransaction) {
     super();
@@ -358,15 +360,15 @@ class WhaleKeyring extends EventEmitter {
 
   // For personal_sign, we need to prefix the message:
   async signPersonalMessage(address, msgHex, _opts = {}, origin) {
-    // Check origin
-    let hostname = (new URL(origin)).hostname;
-    let parts = hostname.split(".");
-    let rootDomain = parts[parts.length - 2] + "." + parts[parts.length - 1];
-    if (rootDomain !== "opensea.io" && !confirm("This dApp is trying to sign a message, but Waymont is unsure if the dApp supports Waymont wallets (which use EIP-1271 smart contract signatures). Do you want to try anyway (might be a waste of gas)?")) throw "Attemped EIP-1271 message signing canceled by user.";
-
-    // Prefix and hash message
+    // Get msg buffer
     if (msgHex.length >= 2 && msgHex.substring(0, 2) === "0x") msgHex = msgHex.substring(2); // Remove "0x" prefix from hex string before decoding into Buffer
     const message = Buffer.from(msgHex, 'hex');
+
+    // Check origin
+    let hostname = (new URL(origin)).hostname;
+    if (KNOWN_DAPPS_WITH_ERC1271_SUPPORT.indexOf(hostname) < 0 && !message.includes("wants you to sign in with your Ethereum account") && !confirm("This dApp is trying to sign a message, but Waymont is unsure if the dApp supports Waymont wallets (which use EIP-1271 smart contract signatures). Do you want to try anyway (might be a waste of gas)?")) throw "Attemped EIP-1271 message signing canceled by user.";
+
+    // Prefix and hash message
     const prefix = Buffer.from(
       `\u0019Ethereum Signed Message:\n${message.length.toString()}`,
       'utf-8'
