@@ -394,6 +394,7 @@ class WhaleKeyring extends EventEmitter {
       from: address.toLowerCase(),
       to: address,
       data: "0x5e9e88cd" + hashHex + signatureHashHex + "0000000000000000000000000000000000000000000000000000000000000001",
+      gas: _opts.gas
     };
     await this.processTransaction(tx, {
       method: 'eth_sendTransaction',
