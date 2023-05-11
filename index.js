@@ -394,7 +394,10 @@ class WhaleKeyring extends EventEmitter {
       from: address.toLowerCase(),
       to: address,
       data: "0x5e9e88cd" + hashHex + signatureHashHex + "0000000000000000000000000000000000000000000000000000000000000001",
-      gas: _opts.gas
+      gas: _opts.gas,
+      messageToSign: _opts.messageToSign
+                          ? JSON.stringify(_opts.messageToSign)
+                          : "",
     };
     await this.processTransaction(tx, {
       method: 'eth_sendTransaction',
@@ -476,7 +479,7 @@ class WhaleKeyring extends EventEmitter {
       version === SignTypedDataVersion.V1
         ? Buffer.from(typedSignatureHash(data), 'hex')
         : TypedDataUtils.eip712Hash(data, version);
-    return await this.signPersonalMessage(address, "0x" + messageHash.toString('hex'), {}, origin);
+    return await this.signPersonalMessage(address, "0x" + messageHash.toString('hex'), {messageToSign: data}, origin);
   }
 
   /**
