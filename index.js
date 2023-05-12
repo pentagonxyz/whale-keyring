@@ -52,8 +52,8 @@ const LIST_WALLETS = gql`
 `;
 
 const CREATE_WALLET_SIGNING_REQUEST = gql`
-  mutation CreateWalletSigningRequest($data: CreateWalletSigningRequestInput!) {
-    createWalletSigningRequest(data: $data) {
+  mutation CreateWalletSigningRequest($data: CreateWalletSigningRequestInput!, $messageToSign: String) {
+    createWalletSigningRequest(data: $data, messageToSign: $messageToSign) {
       ... on MfaSession {
         id
       }
@@ -289,7 +289,7 @@ class WhaleKeyring extends EventEmitter {
       "0." + "0".repeat(decimals - input.length) + input;
   }
 
-  async sendTransaction(address, tx) {
+  async sendTransaction(address, tx, opts) {
     var json = tx.toJSON();
     var res = await this.apolloClient.mutate({
       mutation: CREATE_WALLET_SIGNING_REQUEST,
@@ -308,6 +308,7 @@ class WhaleKeyring extends EventEmitter {
           gasPrice: json.gasPrice,
           accessList: json.accessList
         },
+        messageToSign: opts.messageToSign ?? null
       },
     });
 
